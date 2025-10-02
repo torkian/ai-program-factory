@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏭 AI Program Factory</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 40px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .dynamic-list {
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .dynamic-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .dynamic-item input {
+            flex: 1;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            padding: 8px 12px;
+            font-size: 0.9rem;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+
+        .generate-btn {
+            width: 100%;
+            padding: 20px;
+            font-size: 1.2rem;
+            margin-top: 20px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+            padding: 40px;
+        }
+
+        .results.active {
+            display: block;
+        }
+
+        .result-card {
+            background: white;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .result-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .qc-score {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .qc-excellent { background: #d4edda; color: #155724; }
+        .qc-good { background: #d1ecf1; color: #0c5460; }
+        .qc-fair { background: #fff3cd; color: #856404; }
+        .qc-poor { background: #f8d7da; color: #721c24; }
+
+        .content-preview {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .program-summary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .summary-stat {
+            display: inline-block;
+            margin: 0 20px;
+        }
+
+        .summary-number {
+            display: block;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .summary-label {
+            display: block;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-stat {
+                display: block;
+                margin: 10px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏭 AI Program Factory</h1>
+            <p>Generate comprehensive training programs with AI-powered content creation</p>
+        </div>
+
+        <div class="main-content">
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('create')">Create Program</button>
+                <button class="tab" onclick="showTab('processing')" style="display: none;" id="processing-tab-btn">Processing</button>
+                <button class="tab" onclick="showTab('results')">View Results</button>
+            </div>
+
+            <!-- Create Program Tab -->
+            <div id="create-tab" class="tab-content active">
+                <form id="program-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="offerType">Program Type</label>
+                            <select id="offerType" name="offerType" required>
+                                <option value="">Select type...</option>
+                                <option value="HR">HR Training</option>
+                                <option value="Sales">Sales Training</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="language">Language</label>
+                            <select id="language" name="language">
+                                <option value="en">English</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="clientName">Client Name</label>
+                        <input type="text" id="clientName" name="clientName" placeholder="Enter client company name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="industry">Industry</label>
+                        <input type="text" id="industry" name="industry" placeholder="e.g., B2B SaaS, Manufacturing, Healthcare" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Products/Services</label>
+                        <div id="products-list" class="dynamic-list">
+                            <div class="dynamic-item">
+                                <input type="text" placeholder="Enter product or service" class="product-input">
+                                <button type="button" class="btn btn-success" onclick="addProduct()">Add</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Target Personas</label>
+                        <div id="personas-list" class="dynamic-list">
+                            <div class="persona-item" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 8px;">
+                                <div class="form-group">
+                                    <input type="text" placeholder="Role (e.g., Account Executive)" class="persona-role">
+                                </div>
+                                <div class="form-group">
+                                    <label>Pain Points:</label>
+                                    <div class="persona-pains">
+                                        <div class="dynamic-item">
+                                            <input type="text" placeholder="Enter pain point" class="pain-input">
+                                            <button type="button" class="btn btn-success" onclick="addPain(this)">Add</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-danger" onclick="removePersona(this)">Remove Persona</button>
+                            </div>
+                            <button type="button" class="btn btn-secondary" onclick="addPersona()">Add Another Persona</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Common Objections</label>
+                        <div id="objections-list" class="dynamic-list">
+                            <div class="dynamic-item">
+                                <input type="text" placeholder="Enter common objection" class="objection-input">
+                                <button type="button" class="btn btn-success" onclick="addObjection()">Add</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Industry Terminology</label>
+                        <div id="terminology-list" class="dynamic-list">
+                            <div class="dynamic-item">
+                                <input type="text" placeholder="Enter industry term or acronym" class="term-input">
+                                <button type="button" class="btn btn-success" onclick="addTerm()">Add</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="styleGuide">Style Guide</label>
+                        <input type="text" id="styleGuide" name="styleGuide" placeholder="e.g., professional, conversational, technical" value="engaging, clear, practical">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="readingLevel">Reading Level</label>
+                        <select id="readingLevel" name="readingLevel">
+                            <option value="Grade 6–8">Grade 6–8</option>
+                            <option value="Grade 8–10" selected>Grade 8–10</option>
+                            <option value="Grade 10–12">Grade 10–12</option>
+                            <option value="College">College Level</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Article Length (words)</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="number" id="articleMin" placeholder="Min" value="800" style="flex: 1;">
+                                <span>to</span>
+                                <input type="number" id="articleMax" placeholder="Max" value="1200" style="flex: 1;">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Video Length (seconds)</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="number" id="videoMin" placeholder="Min" value="120" style="flex: 1;">
+                                <span>to</span>
+                                <input type="number" id="videoMax" placeholder="Max" value="240" style="flex: 1;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 15px; margin-top: 20px;">
+                        <button type="button" class="btn btn-secondary" onclick="fillExampleData()" style="flex: 1;">
+                            📝 Fill Example Data
+                        </button>
+                        <button type="submit" class="btn btn-primary generate-btn" style="flex: 2;">
+                            🚀 Generate Training Program
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+
+            <!-- Processing Tab -->
+            <div id="processing-tab" class="tab-content">
+                <h2>🏭 AI Program Factory - Live Processing</h2>
+                <textarea id="processing-log" readonly style="width: 100%; height: 400px; font-family: monospace; font-size: 14px; background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 8px;">Starting AI Program Factory...\n</textarea>
+                <div style="margin-top: 15px; display: flex; gap: 10px;">
+                    <button onclick="clearLog()" class="btn btn-secondary">Clear Log</button>
+                    <button onclick="downloadLog()" class="btn btn-secondary">Download Log</button>
+                </div>
+            </div>
+
+            <!-- Results Tab -->
+            <div id="results-tab" class="tab-content">
+                <div id="results-content" class="results">
+                    <p>No programs generated yet. Create your first program to see results here.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentProgram = null;
+
+        // Tab switching
+        function showTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName + '-tab').classList.add('active');
+        }
+
+        // Dynamic list management
+        function addProduct() {
+            const input = document.querySelector('.product-input');
+            const value = input.value.trim();
+            if (!value) return;
+
+            const container = document.getElementById('products-list');
+            const item = document.createElement('div');
+            item.className = 'dynamic-item';
+            item.innerHTML = `
+                <input type="text" value="${value}" readonly>
+                <button type="button" class="btn btn-danger" onclick="removeItem(this)">Remove</button>
+            `;
+            container.insertBefore(item, container.lastElementChild);
+            input.value = '';
+        }
+
+        function addPersona() {
+            const container = document.getElementById('personas-list');
+            const item = document.createElement('div');
+            item.className = 'persona-item';
+            item.style.cssText = 'border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 8px;';
+            item.innerHTML = `
+                <div class="form-group">
+                    <input type="text" placeholder="Role (e.g., Sales Manager)" class="persona-role">
+                </div>
+                <div class="form-group">
+                    <label>Pain Points:</label>
+                    <div class="persona-pains">
+                        <div class="dynamic-item">
+                            <input type="text" placeholder="Enter pain point" class="pain-input">
+                            <button type="button" class="btn btn-success" onclick="addPain(this)">Add</button>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-danger" onclick="removePersona(this)">Remove Persona</button>
+            `;
+            container.insertBefore(item, container.lastElementChild);
+        }
+
+        function addPain(button) {
+            const input = button.previousElementSibling;
+            const value = input.value.trim();
+            if (!value) return;
+
+            const painsContainer = button.closest('.persona-pains');
+            const item = document.createElement('div');
+            item.className = 'dynamic-item';
+            item.innerHTML = `
+                <input type="text" value="${value}" readonly>
+                <button type="button" class="btn btn-danger" onclick="removeItem(this)">Remove</button>
+            `;
+            painsContainer.insertBefore(item, painsContainer.lastElementChild);
+            input.value = '';
+        }
+
+        function addObjection() {
+            const input = document.querySelector('.objection-input');
+            const value = input.value.trim();
+            if (!value) return;
+
+            const container = document.getElementById('objections-list');
+            const item = document.createElement('div');
+            item.className = 'dynamic-item';
+            item.innerHTML = `
+                <input type="text" value="${value}" readonly>
+                <button type="button" class="btn btn-danger" onclick="removeItem(this)">Remove</button>
+            `;
+            container.insertBefore(item, container.lastElementChild);
+            input.value = '';
+        }
+
+        function addTerm() {
+            const input = document.querySelector('.term-input');
+            const value = input.value.trim();
+            if (!value) return;
+
+            const container = document.getElementById('terminology-list');
+            const item = document.createElement('div');
+            item.className = 'dynamic-item';
+            item.innerHTML = `
+                <input type="text" value="${value}" readonly>
+                <button type="button" class="btn btn-danger" onclick="removeItem(this)">Remove</button>
+            `;
+            container.insertBefore(item, container.lastElementChild);
+            input.value = '';
+        }
+
+        function removeItem(button) {
+            button.closest('.dynamic-item').remove();
+        }
+
+        function removePersona(button) {
+            button.closest('.persona-item').remove();
+        }
+
+        // Form submission
+        document.getElementById('program-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            console.log('Form submitted, starting generation...');
+
+
+            // Collect form data
+            const formData = collectFormData();
+            console.log('Form data collected:', formData);
+
+            try {
+                // Show processing tab
+                document.getElementById('processing-tab-btn').style.display = 'block';
+                showTab('processing');
+                addToLog('🚀 Starting AI Program Factory...');
+                addToLog('📝 Sending request to server...');
+
+                const response = await fetch('/api/programs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                }
+
+                const result = await response.json();
+                addToLog('✅ Job started with ID: ' + result.jobId);
+
+                if (result.jobId) {
+                    // Connect to progress stream
+                    connectToProgressStream(result.jobId);
+                } else {
+                    throw new Error('No job ID received from server');
+                }
+
+            } catch (error) {
+                addToLog('❌ Error: ' + error.message);
+                alert('Error starting generation: ' + error.message);
+            }
+        });
+
+        function connectToProgressStream(jobId) {
+            addToLog('🔗 Connecting to progress stream...');
+
+            const eventSource = new EventSource(`/api/programs/progress/${jobId}`);
+
+            eventSource.onopen = function(event) {
+                addToLog('✅ Connected to AI progress stream');
+            };
+
+            eventSource.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+
+                    if (data.type === 'connected') {
+                        addToLog('🔗 Progress stream ready');
+                    } else if (data.type === 'step') {
+                        if (data.status === 'starting') {
+                            addToLog(data.message);
+                        } else if (data.status === 'completed') {
+                            addToLog(data.message);
+                            if (data.data && data.data.modules) {
+                                data.data.modules.forEach(module => {
+                                    addToLog(`   📚 ${module.label}: ${module.title}`);
+                                });
+                            }
+                        }
+                    } else if (data.type === 'session') {
+                        if (data.status === 'starting') {
+                            addToLog(data.message);
+                        } else if (data.status === 'completed') {
+                            addToLog(data.message);
+                        } else if (data.status === 'error') {
+                            addToLog('❌ ' + data.message);
+                        }
+                    } else if (data.type === 'session_substep') {
+                        addToLog('    ' + data.message);
+                    } else if (data.type === 'complete') {
+                        addToLog('🎉 ' + data.message);
+                        eventSource.close();
+
+                        // Show results
+                        currentProgram = data.data;
+                        displayResults(data.data);
+                        showTab('results');
+                        return;
+
+                    } else if (data.type === 'error') {
+                        addToLog('❌ Error: ' + data.error);
+                        eventSource.close();
+                        return;
+                    }
+
+                } catch (err) {
+                    addToLog('❌ Error parsing progress data');
+                }
+            };
+
+            eventSource.onerror = function(event) {
+                addToLog('❌ Connection to progress stream lost');
+            };
+        }
+
+        // Simple utility functions
+        function addToLog(message) {
+            const log = document.getElementById('processing-log');
+            if (log) {
+                const timestamp = new Date().toLocaleTimeString();
+                log.value += `[${timestamp}] ${message}\n`;
+                log.scrollTop = log.scrollHeight;
+            }
+        }
+
+        function clearLog() {
+            const log = document.getElementById('processing-log');
+            if (log) {
+                log.value = 'Starting AI Program Factory...\n';
+            }
+        }
+
+        function downloadLog() {
+            const log = document.getElementById('processing-log');
+            if (log) {
+                const blob = new Blob([log.value], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'ai-factory-log-' + new Date().toISOString().slice(0,19).replace(/:/g, '-') + '.txt';
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        }
+
+        function addProgressMessage(message, type = 'info') {
+            console.log('addProgressMessage called:', message, type);
+            const progressDiv = document.getElementById('progress-updates');
+
+            if (!progressDiv) {
+                console.error('progress-updates div not found!');
+                return;
+            }
+
+            console.log('progress-updates div found, adding message');
+
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                'info': '#333',
+                'success': '#28a745',
+                'error': '#dc3545',
+                'detail': '#666'
+            };
+
+            const messageDiv = document.createElement('div');
+            messageDiv.style.cssText = `
+                padding: 4px 0;
+                color: ${colors[type] || colors.info};
+                font-weight: ${type === 'success' ? 'bold' : 'normal'};
+                opacity: ${type === 'detail' ? '0.8' : '1'};
+                font-size: ${type === 'detail' ? '0.85em' : '0.9em'};
+                border-left: ${type === 'success' ? '3px solid #28a745' : type === 'error' ? '3px solid #dc3545' : 'none'};
+                padding-left: ${(type === 'success' || type === 'error') ? '8px' : '0'};
+                margin-left: ${(type === 'success' || type === 'error') ? '4px' : '0'};
+                animation: fadeIn 0.3s ease-in;
+            `;
+            messageDiv.innerHTML = `<span style="color: #999; font-size: 0.8em;">[${timestamp}]</span> ${message}`;
+            progressDiv.appendChild(messageDiv);
+
+            // Auto-scroll to bottom
+            progressDiv.scrollTop = progressDiv.scrollHeight;
+
+            console.log('Message added to UI:', message);
+        }
+
+        function updateStepIndicator(stepNumber, status) {
+            const stepMap = { 1: 1, 2: 2, 3: 3, 4: 4, 9: 5 }; // Map API step numbers to UI positions
+            const uiStep = stepMap[stepNumber];
+            if (!uiStep) return;
+
+            const indicator = document.querySelector(`[data-step="${stepNumber}"]`);
+            if (indicator) {
+                // Remove all status classes
+                indicator.classList.remove('active', 'completed');
+
+                // Add new status
+                if (status === 'active') {
+                    indicator.classList.add('active');
+                } else if (status === 'completed') {
+                    indicator.classList.remove('active');
+                    indicator.classList.add('completed');
+                }
+            }
+        }
+
+        function updateCurrentStep(message) {
+            const currentStepDiv = document.getElementById('current-step');
+            if (currentStepDiv) {
+                currentStepDiv.textContent = message;
+                currentStepDiv.style.animation = 'pulse 0.5s ease-in-out';
+                setTimeout(() => {
+                    if (currentStepDiv.style) {
+                        currentStepDiv.style.animation = '';
+                    }
+                }, 500);
+            }
+        }
+
+        function collectFormData() {
+            // Basic form fields
+            const formData = {
+                offerType: document.getElementById('offerType').value,
+                language: document.getElementById('language').value,
+                client: {
+                    name: document.getElementById('clientName').value,
+                    industry: document.getElementById('industry').value,
+                    products: [],
+                    personas: [],
+                    objections: [],
+                    terminology: []
+                },
+                constraints: {
+                    styleGuide: document.getElementById('styleGuide').value,
+                    readingLevel: document.getElementById('readingLevel').value,
+                    length: {
+                        articleWords: [
+                            parseInt(document.getElementById('articleMin').value),
+                            parseInt(document.getElementById('articleMax').value)
+                        ],
+                        videoSeconds: [
+                            parseInt(document.getElementById('videoMin').value),
+                            parseInt(document.getElementById('videoMax').value)
+                        ]
+                    }
+                }
+            };
+
+            // Collect products
+            document.querySelectorAll('#products-list input[readonly]').forEach(input => {
+                if (input.value.trim()) {
+                    formData.client.products.push(input.value.trim());
+                }
+            });
+
+            // Collect personas
+            document.querySelectorAll('.persona-item').forEach(personaEl => {
+                const roleInput = personaEl.querySelector('.persona-role');
+                if (!roleInput || !roleInput.value.trim()) return;
+
+                const persona = {
+                    role: roleInput.value.trim(),
+                    pains: []
+                };
+
+                personaEl.querySelectorAll('.persona-pains input[readonly]').forEach(painInput => {
+                    if (painInput.value.trim()) {
+                        persona.pains.push(painInput.value.trim());
+                    }
+                });
+
+                formData.client.personas.push(persona);
+            });
+
+            // Collect objections
+            document.querySelectorAll('#objections-list input[readonly]').forEach(input => {
+                if (input.value.trim()) {
+                    formData.client.objections.push(input.value.trim());
+                }
+            });
+
+            // Collect terminology
+            document.querySelectorAll('#terminology-list input[readonly]').forEach(input => {
+                if (input.value.trim()) {
+                    formData.client.terminology.push(input.value.trim());
+                }
+            });
+
+            return formData;
+        }
+
+        function displayResults(program) {
+            const resultsContent = document.getElementById('results-content');
+
+            // Calculate summary stats
+            const totalSessions = program.sessions?.length || 0;
+            const avgScore = program.summary?.averageQcScore || 0;
+            const completedSessions = program.summary?.completedSessions || 0;
+
+            resultsContent.innerHTML = `
+                <div class="program-summary">
+                    <h2>Program Generated Successfully!</h2>
+                    <div style="margin-top: 20px;">
+                        <div class="summary-stat">
+                            <span class="summary-number">${totalSessions}</span>
+                            <span class="summary-label">Total Sessions</span>
+                        </div>
+                        <div class="summary-stat">
+                            <span class="summary-number">${avgScore}/100</span>
+                            <span class="summary-label">Average QC Score</span>
+                        </div>
+                        <div class="summary-stat">
+                            <span class="summary-number">${completedSessions}</span>
+                            <span class="summary-label">Completed Sessions</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sessions-container">
+                    ${program.sessions?.map(session => createSessionCard(session)).join('') || '<p>No sessions generated.</p>'}
+                </div>
+            `;
+
+            resultsContent.classList.add('active');
+            document.getElementById('create-tab').style.display = 'block';
+        }
+
+        function createSessionCard(session) {
+            const qcClass = session.qcScore >= 80 ? 'qc-excellent' :
+                           session.qcScore >= 70 ? 'qc-good' :
+                           session.qcScore >= 60 ? 'qc-fair' : 'qc-poor';
+
+            const articlePreview = typeof session.article === 'string' ?
+                session.article.substring(0, 200) + '...' :
+                'Article content not available';
+
+            return `
+                <div class="result-card">
+                    <div class="result-header">
+                        <div class="result-title">${session.session?.title || 'Untitled Session'}</div>
+                        <div class="qc-score ${qcClass}">QC Score: ${session.qcScore || 0}/100</div>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <strong>Module:</strong> ${session.session?.moduleLabel || 'N/A'} |
+                        <strong>Session:</strong> ${session.session?.label || 'N/A'}
+                    </div>
+
+                    ${session.error ? `
+                        <div style="color: #721c24; background: #f8d7da; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+                            <strong>Error:</strong> ${session.error}
+                        </div>
+                    ` : ''}
+
+                    <div class="content-preview">
+                        <strong>Article Preview:</strong><br>
+                        ${articlePreview}
+                    </div>
+
+                    <div style="margin-top: 15px; display: flex; gap: 10px;">
+                        <button class="btn btn-secondary" onclick="viewContent('${session.id}', 'article')">View Article</button>
+                        <button class="btn btn-secondary" onclick="viewContent('${session.id}', 'script')">View Video Script</button>
+                        <button class="btn btn-secondary" onclick="viewContent('${session.id}', 'quiz')">View Quiz</button>
+                        <button class="btn btn-secondary" onclick="viewContent('${session.id}', 'exercise')">View Exercise</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function viewContent(sessionId, contentType) {
+            const session = currentProgram?.sessions?.find(s => s.id === sessionId);
+            if (!session) return;
+
+            let content = '';
+            switch(contentType) {
+                case 'article':
+                    content = session.article || 'No article content';
+                    break;
+                case 'script':
+                    content = session.script || 'No script content';
+                    break;
+                case 'quiz':
+                    content = JSON.stringify(session.quiz, null, 2) || 'No quiz content';
+                    break;
+                case 'exercise':
+                    content = JSON.stringify(session.exercise, null, 2) || 'No exercise content';
+                    break;
+            }
+
+            // Create modal or new window to show content
+            const newWindow = window.open('', '_blank', 'width=800,height=600');
+            newWindow.document.write(`
+                <html>
+                    <head>
+                        <title>${session.session?.title} - ${contentType}</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+                            pre { background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>${session.session?.title} - ${contentType.toUpperCase()}</h1>
+                        <pre>${content}</pre>
+                    </body>
+                </html>
+            `);
+        }
+
+        function fillExampleData() {
+            // Clear existing data first
+            clearForm();
+
+            // Fill basic fields
+            document.getElementById('offerType').value = 'Sales';
+            document.getElementById('clientName').value = 'TechFlow Solutions';
+            document.getElementById('industry').value = 'B2B SaaS';
+            document.getElementById('styleGuide').value = 'professional, conversational, results-focused';
+
+            // Add products
+            const productInputs = [
+                'CRM Platform',
+                'Email Marketing Automation',
+                'Sales Analytics Dashboard',
+                'Lead Management System'
+            ];
+            productInputs.forEach(product => {
+                document.querySelector('.product-input').value = product;
+                addProduct();
+            });
+
+            // Add first persona
+            const firstPersonaRole = document.querySelector('.persona-role');
+            firstPersonaRole.value = 'Account Executive';
+
+            // Add pains for first persona
+            const painInputs = ['Long sales cycles', 'Inconsistent lead qualification', 'Territory management challenges'];
+            const firstPainInput = document.querySelector('.pain-input');
+            painInputs.forEach(pain => {
+                firstPainInput.value = pain;
+                addPain(firstPainInput.nextElementSibling);
+            });
+
+            // Add second persona
+            addPersona();
+            const personaItems = document.querySelectorAll('.persona-item');
+            const secondPersona = personaItems[personaItems.length - 2]; // -2 because last is the add button
+            const secondRole = secondPersona.querySelector('.persona-role');
+            secondRole.value = 'Sales Manager';
+
+            const secondPainInput = secondPersona.querySelector('.pain-input');
+            const managerPains = ['Team performance tracking', 'Pipeline forecasting accuracy', 'Quota planning and allocation'];
+            managerPains.forEach(pain => {
+                secondPainInput.value = pain;
+                addPain(secondPainInput.nextElementSibling);
+            });
+
+            // Add objections
+            const objectionInputs = [
+                'Too expensive compared to current solution',
+                'Already have a system in place',
+                'Need board approval for major purchases',
+                'Concerned about implementation time'
+            ];
+            objectionInputs.forEach(objection => {
+                document.querySelector('.objection-input').value = objection;
+                addObjection();
+            });
+
+            // Add terminology
+            const termInputs = ['ICP', 'MQL', 'SQL', 'BANT', 'Champion', 'Decision Maker', 'MEDDIC'];
+            termInputs.forEach(term => {
+                document.querySelector('.term-input').value = term;
+                addTerm();
+            });
+
+            alert('✅ Example data filled! You can now generate a training program or modify the data as needed.');
+        }
+
+        function clearForm() {
+            // Clear text inputs
+            document.getElementById('clientName').value = '';
+            document.getElementById('industry').value = '';
+            document.getElementById('styleGuide').value = 'engaging, clear, practical';
+
+            // Clear dynamic lists
+            document.querySelectorAll('#products-list .dynamic-item:not(:last-child)').forEach(item => item.remove());
+            document.querySelectorAll('#objections-list .dynamic-item:not(:last-child)').forEach(item => item.remove());
+            document.querySelectorAll('#terminology-list .dynamic-item:not(:last-child)').forEach(item => item.remove());
+
+            // Clear personas except first one
+            const personasContainer = document.getElementById('personas-list');
+            const personaItems = personasContainer.querySelectorAll('.persona-item');
+            personaItems.forEach((item, index) => {
+                if (index === 0) {
+                    // Clear first persona
+                    item.querySelector('.persona-role').value = '';
+                    item.querySelectorAll('.persona-pains .dynamic-item:not(:last-child)').forEach(pain => pain.remove());
+                } else {
+                    item.remove();
+                }
+            });
+
+            // Clear input fields
+            document.querySelector('.product-input').value = '';
+            document.querySelector('.objection-input').value = '';
+            document.querySelector('.term-input').value = '';
+            document.querySelector('.pain-input').value = '';
+        }
+    </script>
+</body>
+</html>
