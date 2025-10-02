@@ -98,6 +98,57 @@ npm run type-check
 - `GET /api/programs/:id` - Retrieve program details
 - `GET /api/programs/progress/:jobId` - Real-time progress stream
 
+## Deployment
+
+### Deploy to Render.com
+
+This application is optimized for Render.com deployment with the included `render.yaml` configuration.
+
+#### One-Click Deploy
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/torkian/ai-program-factory)
+
+#### Manual Deployment
+
+1. **Fork or clone** this repository to your GitHub account
+2. **Create a new Web Service** on [Render.com](https://render.com)
+3. **Connect your repository** to the new service
+4. **Set environment variables** in the Render dashboard:
+   ```
+   OPENAI_API_KEY=your_openai_api_key_here
+   NODE_ENV=production
+   PORT=10000
+   MODEL=gpt-4o-mini
+   ```
+5. **Deploy** - Render will automatically build and deploy your application
+
+#### Environment Variables
+
+The following environment variables need to be set in Render:
+
+- `OPENAI_API_KEY` ⚠️ **Required** - Your OpenAI API key
+- `NODE_ENV` - Set to `production` for production deployments
+- `PORT` - Render automatically sets this to 10000
+- `MODEL` - OpenAI model to use (default: `gpt-4o-mini`)
+
+#### Build Configuration
+
+The application uses the following build process:
+- **Build Command**: `npm ci && npm run build`
+- **Start Command**: `npm start`
+- **Health Check**: Available at `/` endpoint
+
+## Local Development
+
+For local development, copy `.env.example` to `.env` and add your OpenAI API key:
+
+```bash
+cp .env.example .env
+# Edit .env with your OPENAI_API_KEY
+npm install
+npm run dev
+```
+
 ## License
 
 MIT

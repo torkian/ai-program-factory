@@ -93,30 +93,6 @@ function sendProgress(jobId: string, data: any) {
   }
 }
 
-router.post("/", async (req, res) => {
-  const jobId = id(); // Generate unique job ID for progress tracking
-
-  try {
-    console.log("\n=== 🏭 AI Program Factory - Starting Generation ===");
-    console.log("Request:", JSON.stringify(req.body, null, 2));
-
-    // Send job ID immediately so client can connect to progress stream
-    res.json({ jobId, status: 'started', message: 'Generation started - connect to progress stream' });
-
-    // Continue processing in background
-    processProgram(jobId, req.body);
-
-  } catch (error: any) {
-    console.error("\n❌ === Program Generation Failed ===");
-    console.error("Error:", error.message);
-    sendProgress(jobId, {
-      type: 'error',
-      error: error.message,
-      step: 'initialization'
-    });
-  }
-});
-
 async function processProgram(jobId: string, requestBody: any) {
   try {
     sendProgress(jobId, {
@@ -312,8 +288,10 @@ async function processProgram(jobId: string, requestBody: any) {
     console.log(`🎯 Average QC Score: ${avgQcScore}/100`);
     console.log(`📚 Generated ${results.length} complete training sessions`);
 
-    res.json({
-      id: programId,
+    // Send final progress update with completion data
+    sendProgress(jobId, {
+      type: 'complete',
+      programId,
       manifest,
       sessions: results,
       summary: {
@@ -326,10 +304,35 @@ async function processProgram(jobId: string, requestBody: any) {
   } catch (error: any) {
     console.error("\n❌ === Program Generation Failed ===");
     console.error("Error:", error.message);
-    res.status(500).json({
+    sendProgress(jobId, {
+      type: 'error',
       error: "Program generation failed",
       details: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+}
+
+router.post("/", async (req, res) => {
+  const jobId = id(); // Generate unique job ID for progress tracking
+
+  try {
+    console.log("\n=== 🏭 AI Program Factory - Starting Generation ===");
+    console.log("Request:", JSON.stringify(req.body, null, 2));
+
+    // Send job ID immediately so client can connect to progress stream
+    res.json({ jobId, status: 'started', message: 'Generation started - connect to progress stream' });
+
+    // Continue processing in background
+    processProgram(jobId, req.body);
+
+  } catch (error: any) {
+    console.error("\n❌ === Program Generation Failed ===");
+    console.error("Error:", error.message);
+    sendProgress(jobId, {
+      type: 'error',
+      error: error.message,
+      step: 'initialization'
     });
   }
 });
