@@ -4,7 +4,6 @@ services:
     runtime: node
     plan: starter
     region: oregon
-    rootDir: ./server
     buildCommand: npm ci && npm run build
     startCommand: npm start
     envVars:
