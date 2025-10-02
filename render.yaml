@@ -2,10 +2,10 @@ services:
   - type: web
     name: ai-program-factory
     runtime: node
-    plan: starter
+    plan: free
     region: oregon
     buildCommand: npm ci && npm run build
-    startCommand: node ./dist/index.js
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
