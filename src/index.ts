@@ -4,6 +4,9 @@ import dotenv from "dotenv";
 import path from "path";
 import { router as programRouter } from "./routes/program-with-progress";
 import { router as sessionRouter } from "./routes/session";
+import { router as workflowRouter } from "./routes/workflow";
+import { initDatabase } from "./database/init";
+import { seedPromptTemplates } from "./database/seed";
 
 dotenv.config();
 
@@ -25,6 +28,7 @@ app.use((req, res, next) => {
 // API routes
 app.use("/api/programs", programRouter);
 app.use("/api/sessions", sessionRouter);
+app.use("/api/workflow", workflowRouter);
 
 app.get("/", (req, res) => {
   res.json({
@@ -43,6 +47,22 @@ app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Initialize database and start server
+async function startServer() {
+  try {
+    console.log('Initializing database...');
+    await initDatabase();
+
+    console.log('Seeding prompt templates...');
+    await seedPromptTemplates();
+
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
