@@ -14,9 +14,16 @@ import { batchGenerator } from '../services/batchGenerator';
 const router = Router();
 
 // Configure multer for file uploads
+// Use /tmp directory for Render compatibility (read-only filesystem)
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/');
+    const uploadDir = process.env.NODE_ENV === 'production' ? '/tmp/uploads' : 'uploads';
+    // Create directory if it doesn't exist
+    const fs = require('fs');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
