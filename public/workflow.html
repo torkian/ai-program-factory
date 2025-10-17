@@ -63,15 +63,38 @@
             text-align: center;
             padding: 10px;
             position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 6px;
+        }
+
+        .progress-step:hover {
+            background: #e9ecef;
         }
 
         .progress-step.active {
             color: #667eea;
             font-weight: bold;
+            background: #f0f3ff;
         }
 
         .progress-step.completed {
             color: #28a745;
+        }
+
+        .progress-step.completed::after {
+            content: "✓";
+            margin-left: 5px;
+            font-weight: bold;
+        }
+
+        .progress-step.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .progress-step.disabled:hover {
+            background: transparent;
         }
 
         .step-content {
@@ -131,6 +154,27 @@
         .btn-secondary {
             background: #6c757d;
             color: white;
+        }
+
+        .btn-back {
+            background: #e9ecef;
+            color: #495057;
+            padding: 10px 20px;
+            margin-right: 10px;
+        }
+
+        .btn-back:hover {
+            background: #dee2e6;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .navigation-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e1e5e9;
         }
 
         .route-options {
@@ -281,6 +325,38 @@
             flex: 1;
             cursor: pointer;
         }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .matrix-session {
+            border: 1px solid #e1e5e9;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            background: white;
+        }
+
+        .matrix-session h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .matrix-session ul {
+            margin: 10px 0 10px 20px;
+        }
     </style>
 </head>
 <body>
@@ -293,12 +369,12 @@
         <div class="workflow-container">
             <!-- Progress Bar -->
             <div class="progress-bar" id="progress-bar">
-                <div class="progress-step active" data-step="brief">Client Brief</div>
-                <div class="progress-step" data-step="route">Route Selection</div>
-                <div class="progress-step" data-step="prepare">Preparation</div>
-                <div class="progress-step" data-step="matrix">Program Matrix</div>
-                <div class="progress-step" data-step="sample">Sample Article</div>
-                <div class="progress-step" data-step="complete">Complete</div>
+                <div class="progress-step" data-step="brief" data-target="brief" onclick="navigateToStep('brief')">Client Brief</div>
+                <div class="progress-step disabled" data-step="route" data-target="route_selection" onclick="navigateToStep('route_selection')">Route Selection</div>
+                <div class="progress-step disabled" data-step="prepare" data-target="content_review" onclick="navigateToStep('content_review')">Preparation</div>
+                <div class="progress-step disabled" data-step="matrix" data-target="matrix_review" onclick="navigateToStep('matrix_review')">Program Matrix</div>
+                <div class="progress-step disabled" data-step="sample" data-target="sample_validation" onclick="navigateToStep('sample_validation')">Sample Article</div>
+                <div class="progress-step disabled" data-step="complete" data-target="completed" onclick="navigateToStep('completed')">Complete</div>
             </div>
 
             <!-- Loading Indicator -->
@@ -386,6 +462,30 @@
                 <button class="btn btn-primary" onclick="handleFileUpload()">Process Files</button>
             </div>
 
+            <!-- Step 4A-2: Content Review (Route A) -->
+            <div class="step-content" id="step-content-review">
+                <h2>Review Extracted Content</h2>
+                <p style="margin-bottom: 20px;">Please review the content we extracted from your uploaded files. Does it look accurate?</p>
+
+                <div id="content-preview" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; max-height: 400px; overflow-y: auto; white-space: pre-wrap; font-family: monospace; font-size: 0.9rem;"></div>
+
+                <div class="navigation-buttons">
+                    <button class="btn btn-back" onclick="navigateToStep('route_a_upload')">← Back</button>
+                    <div style="display: flex; gap: 15px;">
+                        <button class="btn btn-primary" onclick="approveContent()">✓ Looks Good - Continue</button>
+                        <button class="btn btn-secondary" onclick="rejectContent()">↺ Re-upload Files</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4A-3: Approach Selection (Route A) -->
+            <div class="step-content" id="step-approach-a">
+                <h2>Select Learning Approach</h2>
+                <p style="margin-bottom: 20px;">Based on your content, which learning approach would work best for your audience?</p>
+
+                <div id="approaches-list-a" style="margin-bottom: 20px;"></div>
+            </div>
+
             <!-- Step 4B: Research Input (Route B) -->
             <div class="step-content" id="step-research">
                 <h2>Field Research</h2>
@@ -404,26 +504,187 @@
                 <button class="btn btn-primary" onclick="conductResearch()">Start AI Research</button>
             </div>
 
-            <!-- Step 5: Matrix Generation (Placeholder) -->
+            <!-- Step 4A-4: Arc Review (Route A) -->
+            <div class="step-content" id="step-arc-review">
+                <h2>Review Learning Arc</h2>
+                <p style="margin-bottom: 20px;">We've created a narrative flow for your training program. Review the storyline and learning progression.</p>
+
+                <div id="arc-display" style="background: white; padding: 25px; border-radius: 8px; border: 2px solid #667eea; margin-bottom: 20px;"></div>
+
+                <div class="form-group">
+                    <label for="arc-feedback">Feedback / Requested Changes (optional)</label>
+                    <textarea id="arc-feedback" rows="4" placeholder="E.g., Start with more basic concepts, add more real-world examples..."></textarea>
+                </div>
+
+                <div class="navigation-buttons">
+                    <button class="btn btn-back" onclick="navigateToStep('approach_selection_a')">← Back</button>
+                    <div style="display: flex; gap: 15px;">
+                        <button class="btn btn-primary" onclick="approveArc()">✓ Approve Arc</button>
+                        <button class="btn btn-secondary" onclick="reviseArc()">↻ Request Changes</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5: Matrix Generation -->
             <div class="step-content" id="step-matrix">
                 <h2>Program Matrix Generation</h2>
-                <div style="padding: 30px; text-align: center; background: #f8f9fa; border-radius: 8px;">
-                    <h3 style="color: #667eea;">✅ Files Processed Successfully!</h3>
-                    <p style="margin: 20px 0;">Your content has been extracted and analyzed.</p>
-                    <div style="background: white; padding: 20px; border-radius: 6px; margin: 20px 0; text-align: left;">
-                        <h4>Next Steps (Coming in Week 3):</h4>
-                        <ul style="margin: 10px 0 0 20px;">
-                            <li>AI will generate a program matrix structure</li>
-                            <li>You'll review and approve the structure</li>
-                            <li>Sample content will be generated for review</li>
-                            <li>Full batch content generation upon approval</li>
-                        </ul>
+                <p style="margin-bottom: 20px;">Generate a structured training program based on your content and objectives.</p>
+
+                <div class="helper-text" style="padding: 15px; background: #f8f9fa; border-radius: 6px; margin-bottom: 20px;">
+                    <strong>What happens next:</strong>
+                    <ul style="margin: 10px 0 0 20px;">
+                        <li>We'll analyze your content and generate a program structure</li>
+                        <li>The matrix will include sessions, objectives, topics, and duration</li>
+                        <li>You'll be able to review and request changes before proceeding</li>
+                    </ul>
+                </div>
+
+                <button class="btn btn-primary" onclick="generateMatrix()">Generate Program Matrix</button>
+
+                <div id="matrix-loading" style="display: none; margin: 20px 0; text-align: center;">
+                    <div style="display: inline-block; padding: 20px;">
+                        <div class="loading-spinner"></div>
+                        <p style="margin-top: 10px;">Analyzing content and generating program structure...</p>
+                        <p style="font-size: 0.9rem; color: #666;">This may take 30-60 seconds</p>
                     </div>
-                    <p style="color: #6c757d;">This feature is currently under development as part of Week 3 implementation.</p>
-                    <button class="btn btn-secondary" onclick="showStep('sessions')" style="margin-top: 20px;">
-                        Return to Sessions
+                </div>
+
+                <div id="matrix-display" style="display: none;"></div>
+            </div>
+
+            <!-- Step 6: Matrix Review -->
+            <div class="step-content" id="step-matrix-review">
+                <h2>Review Program Matrix</h2>
+                <div id="matrix-review-display"></div>
+
+                <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                    <h3>What do you think?</h3>
+                    <p style="margin-bottom: 15px;">Review the program structure above. You can approve it to continue, or request changes.</p>
+
+                    <div class="form-group">
+                        <label for="matrix-feedback">Feedback / Requested Changes (optional)</label>
+                        <textarea id="matrix-feedback" rows="4" placeholder="E.g., Make the program shorter, add more advanced topics, focus more on practical exercises..."></textarea>
+                    </div>
+
+                    <div class="navigation-buttons">
+                        <button class="btn btn-back" onclick="navigateToStep('arc_review')">← Back</button>
+                        <div style="display: flex; gap: 15px;">
+                            <button class="btn btn-primary" onclick="approveMatrix()">✓ Approve & Continue</button>
+                            <button class="btn btn-secondary" onclick="reviseMatrix()">↻ Request Changes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 7: Sample Content Generation -->
+            <div class="step-content" id="step-sample">
+                <h2>Generate Sample Content</h2>
+                <p style="margin-bottom: 20px;">We'll generate one complete training session (article + quiz) as a sample for you to review before creating all content.</p>
+
+                <button class="btn btn-primary" onclick="generateSample()">Generate Sample Session</button>
+
+                <div id="sample-loading" style="display: none; margin: 20px 0; text-align: center;">
+                    <div style="display: inline-block; padding: 20px;">
+                        <div class="loading-spinner"></div>
+                        <p style="margin-top: 10px;">Generating sample article and quiz...</p>
+                        <p style="font-size: 0.9rem; color: #666;">This may take 30-60 seconds</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 8: Sample Validation -->
+            <div class="step-content" id="step-sample-validation">
+                <h2>Review Sample Content</h2>
+                <p style="margin-bottom: 20px;">Review the quality of the generated content. Does it meet your standards?</p>
+
+                <div id="sample-content-display" style="margin-bottom: 30px;"></div>
+
+                <div class="form-group">
+                    <label for="sample-feedback">Feedback / Requested Changes (optional)</label>
+                    <textarea id="sample-feedback" rows="4" placeholder="E.g., Make it more concise, add more examples, adjust difficulty level..."></textarea>
+                </div>
+
+                <div class="navigation-buttons">
+                    <button class="btn btn-back" onclick="navigateToStep('matrix_review')">← Back</button>
+                    <div style="display: flex; gap: 15px;">
+                        <button class="btn btn-primary" onclick="approveSample()">✓ Approve - Generate All Content</button>
+                        <button class="btn btn-secondary" onclick="reviseSample()">↻ Regenerate Sample</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 9: Batch Generation -->
+            <div class="step-content" id="step-batch">
+                <h2>🎉 Generate All Training Content</h2>
+                <p style="margin-bottom: 20px;">Great! You've approved the sample. Now we'll generate complete content (articles + quizzes) for all sessions in your program.</p>
+
+                <div id="batch-info" style="background: #f0f3ff; padding: 20px; border-radius: 8px; border: 2px solid #667eea; margin-bottom: 30px;">
+                    <h3 style="color: #667eea; margin-bottom: 10px;">What will be generated:</h3>
+                    <div id="batch-summary"></div>
+                </div>
+
+                <div class="helper-text" style="padding: 15px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; margin-bottom: 20px;">
+                    <strong>⏱️ Note:</strong> Generating all content may take several minutes depending on the number of sessions.
+                    You'll see progress updates as each session is generated.
+                </div>
+
+                <button class="btn btn-primary" onclick="startBatchGeneration()" style="font-size: 1.1rem; padding: 15px 30px;">
+                    🚀 Generate All Sessions
+                </button>
+
+                <div id="batch-progress" style="display: none; margin-top: 30px;">
+                    <h3>Generation Progress</h3>
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 15px 0;">
+                        <div id="progress-text" style="margin-bottom: 15px; font-weight: 600; color: #667eea;"></div>
+                        <div style="background: #e9ecef; height: 30px; border-radius: 15px; overflow: hidden;">
+                            <div id="progress-bar-fill" style="background: linear-gradient(45deg, #667eea, #764ba2); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                        </div>
+                        <div id="progress-details" style="margin-top: 15px; font-size: 0.9rem; color: #666;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 10: Completed -->
+            <div class="step-content" id="step-completed">
+                <h2>✅ Workflow Complete!</h2>
+                <p style="margin-bottom: 30px;">Congratulations! All training content has been generated successfully.</p>
+
+                <div id="completion-summary" style="background: #d4edda; padding: 25px; border-radius: 8px; border: 2px solid #28a745; margin-bottom: 30px;">
+                    <h3 style="color: #155724; margin-bottom: 15px;">📦 Generated Content</h3>
+                    <div id="content-stats"></div>
+                </div>
+
+                <h3 style="margin-bottom: 15px;">Download Your Training Program</h3>
+                <p style="margin-bottom: 20px;">Choose your preferred format to download the complete training program:</p>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px;">
+                    <button class="btn btn-primary" onclick="downloadContent('json')" style="padding: 20px;">
+                        📄 Download JSON<br>
+                        <small style="font-weight: normal; opacity: 0.8;">Structured data format</small>
+                    </button>
+                    <button class="btn btn-primary" onclick="downloadContent('html')" style="padding: 20px;">
+                        🌐 Download HTML<br>
+                        <small style="font-weight: normal; opacity: 0.8;">Web-ready format</small>
+                    </button>
+                    <button class="btn btn-primary" onclick="downloadContent('markdown')" style="padding: 20px;">
+                        📝 Download Markdown<br>
+                        <small style="font-weight: normal; opacity: 0.8;">Easy to edit</small>
                     </button>
                 </div>
+
+                <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                    <h4>What's Next?</h4>
+                    <ul style="margin: 15px 0 0 20px;">
+                        <li>Review the generated content</li>
+                        <li>Import into your Learning Management System (LMS)</li>
+                        <li>Make any final customizations</li>
+                        <li>Launch your training program!</li>
+                    </ul>
+                </div>
+
+                <button class="btn btn-secondary" onclick="startNewSession()" style="margin-top: 20px;">
+                    ➕ Create Another Training Program
+                </button>
             </div>
 
             <!-- Success Message -->
@@ -431,6 +692,7 @@
         </div>
     </div>
 
+    <script src="workflow-functions.js"></script>
     <script>
         let currentSessionId = null;
         let currentStep = 'sessions';
@@ -469,6 +731,7 @@
 
         function showNewSessionForm() {
             currentSessionId = null;
+            document.getElementById('brief-form').reset();
             showStep('brief');
         }
 
@@ -526,14 +789,129 @@
                 'brief': 'step-brief',
                 'route_selection': 'step-route',
                 'route_a_upload': 'step-upload',
+                'content_review': 'step-content-review',
+                'approach_selection_a': 'step-approach-a',
+                'arc_generation': 'step-arc-review', // Show arc review page after generation
+                'arc_review': 'step-arc-review',
                 'route_b_research': 'step-research',
-                'approach_selection': 'step-research', // Stay on research step for approach selection
+                'approach_selection_b': 'step-research',
                 'matrix_generation': 'step-matrix',
+                'matrix_review': 'step-matrix-review',
+                'sample_generation': 'step-sample',
+                'sample_validation': 'step-sample-validation',
+                'batch_generation': 'step-batch',
+                'completed': 'step-completed',
                 'sessions': 'step-sessions'
             };
 
             const stepId = stepMap[step] || 'step-sessions';
             document.getElementById(stepId).classList.add('active');
+
+            // Auto-load data for steps that need it
+            if (step === 'content_review') {
+                loadContentReview();
+            }
+
+            if (step === 'approach_selection_a') {
+                loadApproachesIfNeeded();
+            }
+
+            if (step === 'arc_review') {
+                loadArcIfNeeded();
+            }
+
+            if (step === 'matrix_review') {
+                loadMatrixIfNeeded();
+            }
+
+            if (step === 'sample_validation') {
+                loadSampleIfNeeded();
+            }
+
+            // Load batch summary when showing batch step
+            if (step === 'batch_generation') {
+                loadBatchSummary();
+            }
+
+            // Load completion stats when showing completed step
+            if (step === 'completed') {
+                loadCompletionStats();
+            }
+
+            // Update progress bar
+            updateProgressBar(step);
+        }
+
+        // Track completed steps
+        let completedSteps = new Set();
+
+        function updateProgressBar(currentStep) {
+            // Update active state
+            document.querySelectorAll('.progress-step').forEach(step => {
+                step.classList.remove('active');
+            });
+
+            // Map current step to progress bar step
+            const stepProgressMap = {
+                'brief': 'brief',
+                'route_selection': 'route',
+                'route_a_upload': 'prepare',
+                'content_review': 'prepare',
+                'approach_selection_a': 'prepare',
+                'arc_generation': 'prepare',
+                'arc_review': 'prepare',
+                'route_b_research': 'prepare',
+                'approach_selection_b': 'prepare',
+                'matrix_generation': 'matrix',
+                'matrix_review': 'matrix',
+                'sample_generation': 'sample',
+                'sample_validation': 'sample',
+                'batch_generation': 'complete',
+                'completed': 'complete'
+            };
+
+            const progressStep = stepProgressMap[currentStep];
+            if (progressStep) {
+                // Mark current as active
+                const activeElement = document.querySelector(`[data-step="${progressStep}"]`);
+                if (activeElement) {
+                    activeElement.classList.add('active');
+                }
+
+                // Mark all previous steps as completed and enable them
+                const stepOrder = ['brief', 'route', 'prepare', 'matrix', 'sample', 'complete'];
+                const currentIndex = stepOrder.indexOf(progressStep);
+
+                stepOrder.forEach((step, index) => {
+                    const element = document.querySelector(`[data-step="${step}"]`);
+                    if (element) {
+                        if (index < currentIndex) {
+                            element.classList.add('completed');
+                            element.classList.remove('disabled');
+                            completedSteps.add(step);
+                        } else if (index === currentIndex) {
+                            element.classList.remove('disabled', 'completed');
+                        }
+                    }
+                });
+            }
+        }
+
+        function navigateToStep(targetStep) {
+            // Check if step is disabled
+            const element = document.querySelector(`[data-target="${targetStep}"]`);
+            if (element && element.classList.contains('disabled')) {
+                showMessage('This step is not yet available', 'error');
+                return;
+            }
+
+            if (!currentSessionId && targetStep !== 'brief') {
+                showMessage('Please create a session first', 'error');
+                return;
+            }
+
+            // Navigate to the step
+            showStep(targetStep);
         }
 
         document.getElementById('brief-form').addEventListener('submit', async (e) => {
@@ -549,10 +927,15 @@
             showLoading(true);
 
             try {
+                // Send in the format the backend expects
                 const response = await fetch('/api/workflow', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(brief)
+                    body: JSON.stringify({
+                        clientName: brief.clientName,
+                        industry: brief.industry,
+                        brief: brief  // Nest the full brief object
+                    })
                 });
 
                 const data = await response.json();
@@ -621,6 +1004,8 @@
 
                 if (response.ok) {
                     showMessage(`Files uploaded successfully! Processed ${data.filesCount} files.`, 'success');
+                    // Load and show content for review
+                    await loadContentReview();
                     // Move to next step based on response
                     if (data.nextStep) {
                         setTimeout(() => showStep(data.nextStep), 2000);
@@ -749,6 +1134,302 @@ Recognize and respond to potential security threats
 Implement secure patient data handling procedures`;
             document.getElementById('audience').value = 'Healthcare IT professionals and administrators';
             showMessage('Example data filled! You can edit it before saving.', 'success');
+        }
+
+        // Generate matrix
+        async function generateMatrix() {
+            if (!currentSessionId) return;
+
+            document.getElementById('matrix-loading').style.display = 'block';
+            showLoading(true);
+
+            try {
+                const response = await fetch(`/api/workflow/${currentSessionId}/matrix/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    displayMatrix(data.matrix);
+                    showMessage('Program matrix generated successfully!', 'success');
+                    setTimeout(() => showStep(data.nextStep), 2000);
+                } else {
+                    showMessage(data.error || 'Error generating matrix', 'error');
+                }
+            } catch (error) {
+                console.error('Error generating matrix:', error);
+                showMessage('Error generating matrix: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+                document.getElementById('matrix-loading').style.display = 'none';
+            }
+        }
+
+        // Display matrix
+        function displayMatrix(matrix) {
+            const container = document.getElementById('matrix-review-display');
+
+            let html = `
+                <div style="background: white; padding: 25px; border-radius: 8px; border: 2px solid #667eea;">
+                    <h3 style="color: #667eea; margin-bottom: 10px;">${matrix.programTitle}</h3>
+                    <p style="margin-bottom: 20px; color: #666;">${matrix.overview}</p>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+                        <div><strong>Total Sessions:</strong> ${matrix.totalSessions}</div>
+                        <div><strong>Target Audience:</strong> ${matrix.targetAudience}</div>
+                    </div>
+            `;
+
+            matrix.sessions.forEach(session => {
+                html += `
+                    <div class="matrix-session">
+                        <h4>Session ${session.sessionNumber}: ${session.title}</h4>
+                        <p><strong>Duration:</strong> ${session.estimatedDuration}</p>
+
+                        <div style="margin-top: 15px;">
+                            <strong>Learning Objectives:</strong>
+                            <ul>${session.objectives.map(obj => `<li>${obj}</li>`).join('')}</ul>
+                        </div>
+
+                        <div style="margin-top: 15px;">
+                            <strong>Topics Covered:</strong>
+                            <ul>${session.topics.map(topic => `<li>${topic}</li>`).join('')}</ul>
+                        </div>
+
+                        <div style="margin-top: 15px;">
+                            <strong>Key Takeaways:</strong>
+                            <ul>${session.keyTakeaways.map(take => `<li>${take}</li>`).join('')}</ul>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Approve matrix
+        async function approveMatrix() {
+            if (!currentSessionId) return;
+
+            showLoading(true);
+
+            try {
+                const response = await fetch(`/api/workflow/${currentSessionId}/matrix/review`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        decision: 'approve',
+                        feedback: document.getElementById('matrix-feedback').value
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage('Matrix approved! Moving to sample generation...', 'success');
+                    setTimeout(() => showStep(data.nextStep), 2000);
+                } else {
+                    showMessage(data.error || 'Error approving matrix', 'error');
+                }
+            } catch (error) {
+                console.error('Error approving matrix:', error);
+                showMessage('Error approving matrix: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Request matrix revision
+        async function reviseMatrix() {
+            if (!currentSessionId) return;
+
+            const feedback = document.getElementById('matrix-feedback').value;
+            if (!feedback || feedback.trim() === '') {
+                showMessage('Please provide feedback for the requested changes', 'error');
+                return;
+            }
+
+            showLoading(true);
+
+            try {
+                const response = await fetch(`/api/workflow/${currentSessionId}/matrix/regenerate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ feedback })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    displayMatrix(data.matrix);
+                    document.getElementById('matrix-feedback').value = '';
+                    showMessage('Matrix updated based on your feedback!', 'success');
+                } else {
+                    showMessage(data.error || 'Error regenerating matrix', 'error');
+                }
+            } catch (error) {
+                console.error('Error regenerating matrix:', error);
+                showMessage('Error regenerating matrix: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Load batch summary
+        async function loadBatchSummary() {
+            if (!currentSessionId) return;
+
+            try {
+                const response = await fetch(`/api/workflow/${currentSessionId}`);
+                const data = await response.json();
+
+                if (data.session && data.session.data) {
+                    const programMatrix = JSON.parse(data.session.data).programMatrix;
+
+                    if (programMatrix) {
+                        const summaryHtml = `
+                            <p><strong>Program:</strong> ${programMatrix.programTitle}</p>
+                            <p><strong>Total Sessions:</strong> ${programMatrix.totalSessions}</p>
+                            <p><strong>Target Audience:</strong> ${programMatrix.targetAudience}</p>
+                            <p style="margin-top: 15px;">Each session will include:</p>
+                            <ul style="margin: 10px 0 0 20px;">
+                                <li>Complete training article (800-1200 words)</li>
+                                <li>Multiple-choice quiz questions</li>
+                                <li>Explanations for correct answers</li>
+                            </ul>
+                        `;
+                        document.getElementById('batch-summary').innerHTML = summaryHtml;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading batch summary:', error);
+            }
+        }
+
+        // Start batch generation
+        async function startBatchGeneration() {
+            if (!currentSessionId) return;
+
+            // Show progress UI
+            document.getElementById('batch-progress').style.display = 'block';
+            document.getElementById('progress-text').textContent = 'Starting batch generation...';
+            document.getElementById('progress-bar-fill').style.width = '0%';
+            document.getElementById('progress-details').textContent = 'Preparing to generate all sessions';
+
+            showLoading(true);
+
+            try {
+                const response = await fetch(`/api/workflow/${currentSessionId}/batch/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Update progress to 100%
+                    document.getElementById('progress-text').textContent = 'Batch generation complete!';
+                    document.getElementById('progress-bar-fill').style.width = '100%';
+                    document.getElementById('progress-details').textContent =
+                        `Successfully generated ${data.totalSessions} training sessions`;
+
+                    showMessage('All content generated successfully!', 'success');
+
+                    // Move to completion step after a short delay
+                    setTimeout(() => {
+                        if (data.nextStep) {
+                            showStep(data.nextStep);
+                        }
+                    }, 2000);
+                } else {
+                    showMessage(data.error || 'Error generating batch content', 'error');
+                    document.getElementById('progress-text').textContent = 'Generation failed';
+                    document.getElementById('progress-details').textContent = data.error || 'An error occurred';
+                }
+            } catch (error) {
+                console.error('Error generating batch content:', error);
+                showMessage('Error generating batch content: ' + error.message, 'error');
+                document.getElementById('progress-text').textContent = 'Generation failed';
+                document.getElementById('progress-details').textContent = error.message;
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Load completion statistics
+        async function loadCompletionStats() {
+            if (!currentSessionId) return;
+
+            try {
+                const response = await fetch(`/api/workflow/${currentSessionId}`);
+                const data = await response.json();
+
+                if (data.session && data.session.data) {
+                    const sessionData = JSON.parse(data.session.data);
+                    const allContent = sessionData.allContent;
+
+                    if (allContent) {
+                        const statsHtml = `
+                            <p><strong>Program Title:</strong> ${allContent.programTitle}</p>
+                            <p><strong>Total Sessions:</strong> ${allContent.totalSessions}</p>
+                            <p><strong>Sessions Generated:</strong> ${allContent.sessions.length}</p>
+                            <p><strong>Target Audience:</strong> ${allContent.metadata.targetAudience}</p>
+                            <p><strong>Client:</strong> ${allContent.metadata.clientName}</p>
+                            <p><strong>Industry:</strong> ${allContent.metadata.industry}</p>
+                            <p><strong>Generated:</strong> ${new Date(allContent.generatedAt).toLocaleString()}</p>
+                        `;
+                        document.getElementById('content-stats').innerHTML = statsHtml;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading completion stats:', error);
+            }
+        }
+
+        // Download content in specified format
+        async function downloadContent(format) {
+            if (!currentSessionId) return;
+
+            showLoading(true);
+
+            try {
+                const response = await fetch(`/api/workflow/${currentSessionId}/batch/download/${format}`);
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+
+                    // Set filename based on format
+                    const extension = format === 'json' ? 'json' : (format === 'html' ? 'html' : 'md');
+                    a.download = `training-program.${extension}`;
+
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+
+                    showMessage(`Training program downloaded as ${format.toUpperCase()}!`, 'success');
+                } else {
+                    const data = await response.json();
+                    showMessage(data.error || 'Error downloading content', 'error');
+                }
+            } catch (error) {
+                console.error('Error downloading content:', error);
+                showMessage('Error downloading content: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Start a new workflow session
+        function startNewSession() {
+            showStep('sessions');
+            loadSessions();
         }
 
         // Download sample training document
