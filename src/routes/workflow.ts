@@ -5,6 +5,11 @@ import { workflowManager } from '../workflow/manager';
 import { getAllSessions, deleteSession } from '../database/queries';
 import { fileProcessor } from '../services/fileProcessor';
 import { researchAgent } from '../services/researchAgent';
+import { matrixGenerator } from '../services/matrixGenerator';
+import { approachGenerator } from '../services/approachGenerator';
+import { arcGenerator } from '../services/arcGenerator';
+import { sampleGenerator } from '../services/sampleGenerator';
+import { batchGenerator } from '../services/batchGenerator';
 
 const router = Router();
 
@@ -209,8 +214,8 @@ router.post('/:sessionId/upload', upload.array('files', 10), async (req, res) =>
     // Clean up uploaded files from disk
     await fileProcessor.cleanupFiles(files);
 
-    // Advance to matrix generation
-    await workflowManager.advanceToStep(sessionId, 'matrix_generation');
+    // Advance to content review (NEW human decision point)
+    await workflowManager.advanceToStep(sessionId, 'content_review');
 
     res.json({
       success: true,
@@ -223,10 +228,208 @@ router.post('/:sessionId/upload', upload.array('files', 10), async (req, res) =>
           wordCount: f.wordCount
         }))
       },
-      nextStep: 'matrix_generation'
+      nextStep: 'content_review'
     });
   } catch (error: any) {
     console.error('Error uploading files:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Approve content (Route A - after upload)
+ */
+router.post('/:sessionId/content/approve', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { feedback } = req.body;
+
+    // Record approval decision
+    await workflowManager.recordDecision(sessionId, 'content_review', 'approve', feedback);
+
+    // Advance to approach selection
+    await workflowManager.advanceToStep(sessionId, 'approach_selection_a');
+
+    res.json({
+      success: true,
+      nextStep: 'approach_selection_a'
+    });
+  } catch (error: any) {
+    console.error('Error approving content:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Reject content (Route A - back to upload)
+ */
+router.post('/:sessionId/content/reject', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { feedback } = req.body;
+
+    // Record rejection decision
+    await workflowManager.recordDecision(sessionId, 'content_review', 'reject', feedback);
+
+    // Go back to upload step
+    await workflowManager.advanceToStep(sessionId, 'route_a_upload');
+
+    res.json({
+      success: true,
+      nextStep: 'route_a_upload'
+    });
+  } catch (error: any) {
+    console.error('Error rejecting content:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Generate approaches for Route A
+ */
+router.post('/:sessionId/approaches/generate', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    const brief = await workflowManager.getStepData(sessionId, 'brief');
+    const extractedContent = await workflowManager.getStepData(sessionId, 'extractedContent');
+
+    if (!brief || !extractedContent) {
+      return res.status(400).json({ error: 'Brief or content not found' });
+    }
+
+    const approaches = await approachGenerator.generateApproachesFromContent(brief, extractedContent);
+
+    // Save approaches
+    await workflowManager.saveStepData(sessionId, 'generatedApproaches', approaches);
+
+    res.json({
+      success: true,
+      approaches
+    });
+  } catch (error: any) {
+    console.error('Error generating approaches:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Select approach (Route A)
+ */
+router.post('/:sessionId/approach/select', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { approach, feedback } = req.body;
+
+    if (!approach) {
+      return res.status(400).json({ error: 'approach is required' });
+    }
+
+    await workflowManager.saveStepData(sessionId, 'selectedApproach', approach);
+    await workflowManager.recordDecision(sessionId, 'approach_selection_a', approach, feedback);
+    await workflowManager.advanceToStep(sessionId, 'arc_generation');
+
+    res.json({
+      success: true,
+      nextStep: 'arc_generation'
+    });
+  } catch (error: any) {
+    console.error('Error selecting approach:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Generate learning arc
+ */
+router.post('/:sessionId/arc/generate', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    const brief = await workflowManager.getStepData(sessionId, 'brief');
+    const extractedContent = await workflowManager.getStepData(sessionId, 'extractedContent');
+    const selectedApproach = await workflowManager.getStepData(sessionId, 'selectedApproach');
+
+    if (!brief || !extractedContent || !selectedApproach) {
+      return res.status(400).json({ error: 'Required data not found' });
+    }
+
+    const arc = await arcGenerator.generateArc(brief, extractedContent, selectedApproach);
+
+    // Save arc
+    await workflowManager.saveStepData(sessionId, 'learningArc', arc);
+    await workflowManager.advanceToStep(sessionId, 'arc_review');
+
+    res.json({
+      success: true,
+      arc,
+      nextStep: 'arc_review'
+    });
+  } catch (error: any) {
+    console.error('Error generating arc:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Approve learning arc
+ */
+router.post('/:sessionId/arc/approve', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { feedback } = req.body;
+
+    await workflowManager.recordDecision(sessionId, 'arc_review', 'approve', feedback);
+    await workflowManager.advanceToStep(sessionId, 'matrix_generation');
+
+    res.json({
+      success: true,
+      nextStep: 'matrix_generation'
+    });
+  } catch (error: any) {
+    console.error('Error approving arc:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Regenerate learning arc with feedback
+ */
+router.post('/:sessionId/arc/regenerate', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { feedback } = req.body;
+
+    if (!feedback) {
+      return res.status(400).json({ error: 'Feedback is required' });
+    }
+
+    const brief = await workflowManager.getStepData(sessionId, 'brief');
+    const extractedContent = await workflowManager.getStepData(sessionId, 'extractedContent');
+    const selectedApproach = await workflowManager.getStepData(sessionId, 'selectedApproach');
+    const currentArc = await workflowManager.getStepData(sessionId, 'learningArc');
+
+    if (!brief || !extractedContent || !selectedApproach || !currentArc) {
+      return res.status(400).json({ error: 'Required data not found' });
+    }
+
+    const newArc = await arcGenerator.regenerateArc(
+      brief,
+      extractedContent,
+      selectedApproach,
+      currentArc,
+      feedback
+    );
+
+    // Save updated arc
+    await workflowManager.saveStepData(sessionId, 'learningArc', newArc);
+
+    res.json({
+      success: true,
+      arc: newArc
+    });
+  } catch (error: any) {
+    console.error('Error regenerating arc:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -241,7 +444,10 @@ router.post('/:sessionId/research', async (req, res) => {
     // Get the brief data
     const brief = await workflowManager.getStepData(sessionId, 'brief');
 
+    console.log(`Research request for session ${sessionId}, brief found:`, !!brief);
+
     if (!brief) {
+      console.error(`Brief data not found for session ${sessionId}`);
       return res.status(400).json({ error: 'Brief data not found. Please complete the brief first.' });
     }
 
@@ -252,12 +458,12 @@ router.post('/:sessionId/research', async (req, res) => {
 
     // Save research results
     await workflowManager.saveStepData(sessionId, 'researchResults', research);
-    await workflowManager.advanceToStep(sessionId, 'approach_selection');
+    await workflowManager.advanceToStep(sessionId, 'approach_selection_b');
 
     res.json({
       success: true,
       research,
-      nextStep: 'approach_selection'
+      nextStep: 'approach_selection_b'
     });
   } catch (error: any) {
     console.error('Error conducting research:', error);
@@ -278,7 +484,7 @@ router.post('/:sessionId/approach', async (req, res) => {
     }
 
     await workflowManager.saveStepData(sessionId, 'selectedApproach', approach);
-    await workflowManager.recordDecision(sessionId, 'approach_selection', approach, feedback);
+    await workflowManager.recordDecision(sessionId, 'approach_selection_b', approach, feedback);
     await workflowManager.advanceToStep(sessionId, 'matrix_generation');
 
     res.json({
@@ -292,22 +498,99 @@ router.post('/:sessionId/approach', async (req, res) => {
 });
 
 /**
- * Save program matrix
+ * Generate program matrix (auto-generates based on route)
  */
-router.post('/:sessionId/matrix', async (req, res) => {
+router.post('/:sessionId/matrix/generate', async (req, res) => {
   try {
     const { sessionId } = req.params;
-    const matrix = req.body;
 
+    console.log(`Matrix generation requested for session ${sessionId}`);
+
+    // Get session route and data
+    const session = await workflowManager.getWorkflowSession(sessionId);
+    console.log(`Session found: ${session.id}, Route: ${session.route}, Step: ${session.current_step}`);
+
+    const brief = await workflowManager.getStepData(sessionId, 'brief');
+    console.log(`Brief data found:`, !!brief);
+
+    if (!brief) {
+      console.error(`Brief data not found for session ${sessionId}`);
+      return res.status(400).json({ error: 'Brief data not found' });
+    }
+
+    console.log(`Generating matrix for session ${sessionId} (Route ${session.route})...`);
+
+    let matrix;
+
+    if (session.route === 'A') {
+      // Generate from extracted content
+      const extractedContent = await workflowManager.getStepData(sessionId, 'extractedContent');
+      const learningArc = await workflowManager.getStepData(sessionId, 'learningArc');
+
+      if (!extractedContent) {
+        return res.status(400).json({ error: 'Extracted content not found' });
+      }
+
+      matrix = await matrixGenerator.generateFromContent(brief, extractedContent, learningArc);
+    } else if (session.route === 'B') {
+      // Generate from research
+      const research = await workflowManager.getStepData(sessionId, 'researchResults');
+      const selectedApproach = await workflowManager.getStepData(sessionId, 'selectedApproach');
+      if (!research || !selectedApproach) {
+        return res.status(400).json({ error: 'Research data not found' });
+      }
+      matrix = await matrixGenerator.generateFromResearch(brief, research, selectedApproach);
+    } else {
+      return res.status(400).json({ error: 'Invalid route' });
+    }
+
+    // Save generated matrix
     await workflowManager.saveStepData(sessionId, 'programMatrix', matrix);
     await workflowManager.advanceToStep(sessionId, 'matrix_review');
 
     res.json({
       success: true,
+      matrix,
       nextStep: 'matrix_review'
     });
   } catch (error: any) {
-    console.error('Error saving matrix:', error);
+    console.error('Error generating matrix:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Regenerate matrix with feedback
+ */
+router.post('/:sessionId/matrix/regenerate', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { feedback } = req.body;
+
+    if (!feedback) {
+      return res.status(400).json({ error: 'Feedback is required' });
+    }
+
+    // Get current matrix
+    const currentMatrix = await workflowManager.getStepData(sessionId, 'programMatrix');
+    if (!currentMatrix) {
+      return res.status(400).json({ error: 'No existing matrix found' });
+    }
+
+    console.log(`Regenerating matrix for session ${sessionId} with feedback...`);
+
+    // Regenerate with feedback
+    const newMatrix = await matrixGenerator.regenerateWithFeedback(currentMatrix, feedback);
+
+    // Save updated matrix
+    await workflowManager.saveStepData(sessionId, 'programMatrix', newMatrix);
+
+    res.json({
+      success: true,
+      matrix: newMatrix
+    });
+  } catch (error: any) {
+    console.error('Error regenerating matrix:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -323,10 +606,10 @@ router.post('/:sessionId/matrix/review', async (req, res) => {
     await workflowManager.recordDecision(sessionId, 'matrix_review', decision, feedback);
 
     if (decision === 'approve') {
-      await workflowManager.advanceToStep(sessionId, 'sample_article');
+      await workflowManager.advanceToStep(sessionId, 'sample_generation');
       res.json({
         success: true,
-        nextStep: 'sample_article'
+        nextStep: 'sample_generation'
       });
     } else {
       res.json({
@@ -342,7 +625,102 @@ router.post('/:sessionId/matrix/review', async (req, res) => {
 });
 
 /**
- * Save sample article
+ * Generate sample content (article + quiz)
+ */
+router.post('/:sessionId/sample/generate', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    const brief = await workflowManager.getStepData(sessionId, 'brief');
+    const programMatrix = await workflowManager.getStepData(sessionId, 'programMatrix');
+    const learningArc = await workflowManager.getStepData(sessionId, 'learningArc');
+
+    if (!brief || !programMatrix || !learningArc) {
+      return res.status(400).json({ error: 'Required data not found' });
+    }
+
+    const sample = await sampleGenerator.generateSample(brief, programMatrix, learningArc);
+
+    // Save sample
+    await workflowManager.saveStepData(sessionId, 'sampleContent', sample);
+    await workflowManager.advanceToStep(sessionId, 'sample_validation');
+
+    res.json({
+      success: true,
+      sample,
+      nextStep: 'sample_validation'
+    });
+  } catch (error: any) {
+    console.error('Error generating sample:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Approve sample content
+ */
+router.post('/:sessionId/sample/approve', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { feedback } = req.body;
+
+    await workflowManager.recordDecision(sessionId, 'sample_validation', 'approve', feedback);
+    await workflowManager.advanceToStep(sessionId, 'batch_generation');
+
+    res.json({
+      success: true,
+      nextStep: 'batch_generation'
+    });
+  } catch (error: any) {
+    console.error('Error approving sample:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Regenerate sample with feedback
+ */
+router.post('/:sessionId/sample/regenerate', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { feedback } = req.body;
+
+    if (!feedback) {
+      return res.status(400).json({ error: 'Feedback is required' });
+    }
+
+    const brief = await workflowManager.getStepData(sessionId, 'brief');
+    const programMatrix = await workflowManager.getStepData(sessionId, 'programMatrix');
+    const learningArc = await workflowManager.getStepData(sessionId, 'learningArc');
+    const currentSample = await workflowManager.getStepData(sessionId, 'sampleContent');
+
+    if (!brief || !programMatrix || !learningArc || !currentSample) {
+      return res.status(400).json({ error: 'Required data not found' });
+    }
+
+    const newSample = await sampleGenerator.regenerateSample(
+      brief,
+      programMatrix,
+      learningArc,
+      currentSample,
+      feedback
+    );
+
+    // Save updated sample
+    await workflowManager.saveStepData(sessionId, 'sampleContent', newSample);
+
+    res.json({
+      success: true,
+      sample: newSample
+    });
+  } catch (error: any) {
+    console.error('Error regenerating sample:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Save sample article (DEPRECATED - use /sample/generate instead)
  */
 router.post('/:sessionId/sample', async (req, res) => {
   try {
@@ -350,11 +728,11 @@ router.post('/:sessionId/sample', async (req, res) => {
     const sampleArticle = req.body;
 
     await workflowManager.saveStepData(sessionId, 'sampleArticle', sampleArticle);
-    await workflowManager.advanceToStep(sessionId, 'article_validation');
+    await workflowManager.advanceToStep(sessionId, 'sample_validation');
 
     res.json({
       success: true,
-      nextStep: 'article_validation'
+      nextStep: 'sample_validation'
     });
   } catch (error: any) {
     console.error('Error saving sample article:', error);
@@ -370,7 +748,7 @@ router.post('/:sessionId/sample/validate', async (req, res) => {
     const { sessionId } = req.params;
     const { decision, feedback } = req.body;
 
-    await workflowManager.recordDecision(sessionId, 'article_validation', decision, feedback);
+    await workflowManager.recordDecision(sessionId, 'sample_validation', decision, feedback);
 
     if (decision === 'approve') {
       await workflowManager.advanceToStep(sessionId, 'batch_generation');
@@ -392,7 +770,102 @@ router.post('/:sessionId/sample/validate', async (req, res) => {
 });
 
 /**
- * Save final content and complete
+ * Generate all content (batch generation)
+ */
+router.post('/:sessionId/batch/generate', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    console.log(`Batch generation requested for session ${sessionId}`);
+
+    // Get all required data
+    const brief = await workflowManager.getStepData(sessionId, 'brief');
+    const programMatrix = await workflowManager.getStepData(sessionId, 'programMatrix');
+    const learningArc = await workflowManager.getStepData(sessionId, 'learningArc');
+    const sampleContent = await workflowManager.getStepData(sessionId, 'sampleContent');
+
+    if (!brief || !programMatrix || !learningArc || !sampleContent) {
+      return res.status(400).json({ error: 'Required data not found' });
+    }
+
+    console.log(`Generating batch content for ${programMatrix.totalSessions} sessions...`);
+
+    // Generate all sessions
+    const batchContent = await batchGenerator.generateAllSessions(
+      brief,
+      programMatrix,
+      learningArc,
+      sampleContent
+    );
+
+    // Save batch content
+    await workflowManager.saveStepData(sessionId, 'allContent', batchContent);
+    await workflowManager.completeSession(sessionId);
+
+    res.json({
+      success: true,
+      batchContent,
+      totalSessions: batchContent.sessions.length,
+      nextStep: 'completed'
+    });
+  } catch (error: any) {
+    console.error('Error generating batch content:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Download batch content in specific format
+ */
+router.get('/:sessionId/batch/download/:format', async (req, res) => {
+  try {
+    const { sessionId, format } = req.params;
+
+    const batchContent = await workflowManager.getStepData(sessionId, 'allContent');
+
+    if (!batchContent) {
+      return res.status(404).json({ error: 'Batch content not found' });
+    }
+
+    let content: string;
+    let contentType: string;
+    let filename: string;
+
+    switch (format) {
+      case 'json':
+        content = await batchGenerator.exportToJSON(batchContent);
+        contentType = 'application/json';
+        filename = `${batchContent.programTitle.replace(/[^a-z0-9]/gi, '_')}.json`;
+        break;
+
+      case 'html':
+        content = await batchGenerator.exportToHTML(batchContent);
+        contentType = 'text/html';
+        filename = `${batchContent.programTitle.replace(/[^a-z0-9]/gi, '_')}.html`;
+        break;
+
+      case 'markdown':
+      case 'md':
+        content = await batchGenerator.exportToMarkdown(batchContent);
+        contentType = 'text/markdown';
+        filename = `${batchContent.programTitle.replace(/[^a-z0-9]/gi, '_')}.md`;
+        break;
+
+      default:
+        return res.status(400).json({ error: 'Invalid format. Use json, html, or markdown' });
+    }
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(content);
+  } catch (error: any) {
+    console.error('Error downloading batch content:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Save final content and complete (DEPRECATED - use /batch/generate instead)
  */
 router.post('/:sessionId/complete', async (req, res) => {
   try {

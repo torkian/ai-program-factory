@@ -14,12 +14,16 @@ export type WorkflowStep =
   | 'brief'
   | 'route_selection'
   | 'route_a_upload'
+  | 'content_review'        // NEW: Review extracted content
+  | 'approach_selection_a'  // NEW: Choose approach for Route A
+  | 'arc_generation'        // NEW: Generate learning arc
+  | 'arc_review'            // NEW: Review learning arc
   | 'route_b_research'
-  | 'approach_selection'
+  | 'approach_selection_b'  // Route B approach selection
   | 'matrix_generation'
   | 'matrix_review'
-  | 'sample_article'
-  | 'article_validation'
+  | 'sample_generation'     // NEW: Generate sample article + quiz
+  | 'sample_validation'     // NEW: Validate sample quality
   | 'batch_generation'
   | 'completed';
 
@@ -135,13 +139,23 @@ export class WorkflowManager {
     const stepFlow: Record<WorkflowStep, WorkflowStep | ((route?: 'A' | 'B') => WorkflowStep)> = {
       'brief': 'route_selection',
       'route_selection': (r) => r === 'A' ? 'route_a_upload' : 'route_b_research',
-      'route_a_upload': 'matrix_generation',
-      'route_b_research': 'approach_selection',
-      'approach_selection': 'matrix_generation',
+
+      // Route A flow
+      'route_a_upload': 'content_review',
+      'content_review': 'approach_selection_a',
+      'approach_selection_a': 'arc_generation',
+      'arc_generation': 'arc_review',
+      'arc_review': 'matrix_generation',
+
+      // Route B flow
+      'route_b_research': 'approach_selection_b',
+      'approach_selection_b': 'arc_generation',
+
+      // Common flow
       'matrix_generation': 'matrix_review',
-      'matrix_review': 'sample_article',
-      'sample_article': 'article_validation',
-      'article_validation': 'batch_generation',
+      'matrix_review': 'sample_generation',
+      'sample_generation': 'sample_validation',
+      'sample_validation': 'batch_generation',
       'batch_generation': 'completed',
       'completed': 'completed'
     };
@@ -161,12 +175,16 @@ export class WorkflowManager {
       'brief': 'Client Brief',
       'route_selection': 'Route Selection',
       'route_a_upload': 'Upload Materials',
+      'content_review': 'Review Extracted Content',
+      'approach_selection_a': 'Select Learning Approach',
+      'arc_generation': 'Generate Learning Arc',
+      'arc_review': 'Review Learning Arc',
       'route_b_research': 'Field Research',
-      'approach_selection': 'Select Approach',
+      'approach_selection_b': 'Select Learning Approach',
       'matrix_generation': 'Generate Program Matrix',
       'matrix_review': 'Review Program Matrix',
-      'sample_article': 'Generate Sample Article',
-      'article_validation': 'Validate Sample Quality',
+      'sample_generation': 'Generate Sample Content',
+      'sample_validation': 'Validate Sample Quality',
       'batch_generation': 'Generate All Content',
       'completed': 'Completed'
     };
@@ -188,13 +206,14 @@ export class WorkflowManager {
         return !!data.uploadedFiles && data.uploadedFiles.length > 0;
       case 'route_b_research':
         return !!data.researchResults;
-      case 'approach_selection':
+      case 'approach_selection_a':
+      case 'approach_selection_b':
         return !!data.selectedApproach;
       case 'matrix_generation':
         return !!data.programMatrix;
-      case 'sample_article':
+      case 'sample_generation':
         return !!data.sampleArticle;
-      case 'article_validation':
+      case 'sample_validation':
         return !!data.sampleArticle; // Requires approval
       default:
         return true;
