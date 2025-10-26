@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { promptTemplateService, PromptCategory } from './promptTemplateService';
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -12,27 +13,17 @@ export interface LearningApproach {
   bestFor: string[];
 }
 
-export class ApproachGenerator {
-  /**
-   * Generate learning approaches based on extracted content (Route A)
-   */
-  async generateApproachesFromContent(
-    brief: any,
-    extractedContent: string
-  ): Promise<LearningApproach[]> {
-    try {
-      console.log('Generating learning approaches from content...');
-
-      const prompt = `You are an instructional designer analyzing content to recommend learning approaches.
+// Default prompt templates (used as fallback if database template not found)
+const DEFAULT_APPROACH_FROM_CONTENT_PROMPT = `You are an instructional designer analyzing content to recommend learning approaches.
 
 CLIENT BRIEF:
-- Client: ${brief.clientName}
-- Industry: ${brief.industry}
-- Objectives: ${brief.objectives || 'General training'}
-- Audience: ${brief.audience || 'General employees'}
+- Client: {{clientName}}
+- Industry: {{industry}}
+- Objectives: {{objectives}}
+- Audience: {{audience}}
 
 CONTENT ANALYSIS:
-${extractedContent.substring(0, 4000)}${extractedContent.length > 4000 ? '...(truncated)' : ''}
+{{contentPreview}}
 
 TASK:
 Analyze the content and recommend 3 different learning approaches that would work well with this material.
@@ -46,6 +37,35 @@ Return JSON with:
   - bestFor: Array of 2-3 learner characteristics this approach suits (e.g., "Visual learners", "Experienced professionals")
 
 Make approaches diverse and specifically suited to the content type and audience.`;
+
+export class ApproachGenerator {
+  /**
+   * Generate learning approaches based on extracted content (Route A)
+   */
+  async generateApproachesFromContent(
+    brief: any,
+    extractedContent: string
+  ): Promise<LearningApproach[]> {
+    try {
+      console.log('Generating learning approaches from content...');
+
+      // Load prompt template from database or use default
+      const promptTemplate = await promptTemplateService.getPrompt(
+        PromptCategory.APPROACH_GENERATION_CONTENT,
+        DEFAULT_APPROACH_FROM_CONTENT_PROMPT
+      );
+
+      // Build prompt with variables
+      const contentPreview = extractedContent.substring(0, 4000) +
+        (extractedContent.length > 4000 ? '...(truncated)' : '');
+
+      const prompt = promptTemplateService.buildPrompt(promptTemplate, {
+        clientName: brief.clientName,
+        industry: brief.industry,
+        objectives: brief.objectives || 'General training',
+        audience: brief.audience || 'General employees',
+        contentPreview
+      });
 
       const response = await client.chat.completions.create({
         model: 'gpt-4o',

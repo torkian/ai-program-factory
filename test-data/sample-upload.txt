@@ -1,0 +1,157 @@
+API Design Best Practices
+
+Introduction to RESTful APIs
+
+REST (Representational State Transfer) is an architectural style for designing networked applications. It relies on a stateless, client-server protocol, almost always HTTP. RESTful applications use HTTP requests to perform CRUD (Create, Read, Update, Delete) operations on resources.
+
+Key Principles of REST
+
+1. Resource-Based URLs
+   - Use nouns, not verbs in endpoint paths
+   - Example: GET /users/123 (good) vs GET /getUser?id=123 (bad)
+   - Resources should be plural: /users, /products, /orders
+
+2. HTTP Methods
+   - GET: Retrieve a resource or collection
+   - POST: Create a new resource
+   - PUT: Update an existing resource (full replacement)
+   - PATCH: Partially update a resource
+   - DELETE: Remove a resource
+
+3. Status Codes
+   Use appropriate HTTP status codes:
+   - 200 OK: Request succeeded
+   - 201 Created: Resource successfully created
+   - 204 No Content: Successful request with no response body
+   - 400 Bad Request: Invalid request syntax or parameters
+   - 401 Unauthorized: Authentication required
+   - 403 Forbidden: Valid request but server refuses
+   - 404 Not Found: Resource doesn't exist
+   - 500 Internal Server Error: Server error
+
+4. Versioning
+   Always version your API to maintain backward compatibility:
+   - URL versioning: /api/v1/users
+   - Header versioning: Accept: application/vnd.myapi.v1+json
+   - Query parameter: /api/users?version=1
+
+5. Pagination
+   For endpoints that return large datasets, implement pagination:
+   - Offset-based: GET /users?offset=20&limit=10
+   - Cursor-based: GET /users?cursor=abc123&limit=10
+   - Page-based: GET /users?page=3&per_page=10
+
+6. Filtering and Sorting
+   Allow clients to filter and sort results:
+   - Filtering: GET /users?status=active&role=admin
+   - Sorting: GET /users?sort=-created_at (descending)
+
+7. Error Handling
+   Return consistent, descriptive error responses:
+   {
+     "error": {
+       "code": "VALIDATION_ERROR",
+       "message": "Invalid email format",
+       "field": "email"
+     }
+   }
+
+8. Authentication and Authorization
+   - Use OAuth 2.0 or JWT for authentication
+   - Include authentication tokens in headers, not URLs
+   - Authorization: Bearer <token>
+
+9. Rate Limiting
+   Protect your API from abuse:
+   - Implement rate limits per user/IP
+   - Return rate limit info in headers:
+     X-RateLimit-Limit: 1000
+     X-RateLimit-Remaining: 999
+     X-RateLimit-Reset: 1628598400
+
+10. Documentation
+    - Provide clear, comprehensive API documentation
+    - Use tools like Swagger/OpenAPI
+    - Include examples for all endpoints
+    - Document authentication requirements
+
+Best Practices for API Design
+
+Consistency
+- Use consistent naming conventions
+- Maintain predictable patterns across endpoints
+- Follow established conventions (snake_case, camelCase)
+
+Security
+- Always use HTTPS in production
+- Validate all input data
+- Sanitize output to prevent XSS
+- Implement proper CORS policies
+
+Performance
+- Use caching headers (ETag, Cache-Control)
+- Compress responses (gzip)
+- Optimize database queries
+- Consider implementing GraphQL for complex queries
+
+Idempotency
+- GET, PUT, DELETE should be idempotent
+- POST is not idempotent
+- Use idempotency keys for critical operations
+
+Backward Compatibility
+- Don't remove or rename existing fields
+- Add new fields instead of modifying existing ones
+- Deprecate features gradually with warnings
+
+Common Pitfalls to Avoid
+
+1. Returning different data structures for the same endpoint
+2. Using verbs in URLs (e.g., /getUser, /createPost)
+3. Not handling errors consistently
+4. Exposing implementation details in responses
+5. Ignoring security best practices
+6. Not documenting breaking changes
+7. Returning too much data (missing pagination)
+8. Inconsistent date/time formats
+
+Example: Well-Designed API
+
+GET /api/v1/users?page=1&per_page=20&status=active
+Response: 200 OK
+{
+  "data": [
+    {
+      "id": "uuid-123",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "created_at": "2024-01-15T10:30:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "per_page": 20,
+    "total_pages": 5,
+    "total_items": 100
+  }
+}
+
+POST /api/v1/users
+Request:
+{
+  "name": "Jane Smith",
+  "email": "jane@example.com",
+  "role": "user"
+}
+Response: 201 Created
+{
+  "id": "uuid-456",
+  "name": "Jane Smith",
+  "email": "jane@example.com",
+  "role": "user",
+  "created_at": "2024-01-15T11:00:00Z"
+}
+
+Conclusion
+
+Good API design is crucial for creating maintainable, scalable applications. By following REST principles and best practices, you can build APIs that are intuitive, secure, and developer-friendly. Remember to always document your API thoroughly and version it properly to ensure smooth evolution over time.
