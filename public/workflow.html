@@ -1286,8 +1286,8 @@ Implement secure patient data handling procedures`;
                 const response = await fetch(`/api/workflow/${currentSessionId}`);
                 const data = await response.json();
 
-                if (data.session && data.session.data) {
-                    const programMatrix = JSON.parse(data.session.data).programMatrix;
+                if (data.data && data.data.programMatrix) {
+                    const programMatrix = data.data.programMatrix;
 
                     if (programMatrix) {
                         const summaryHtml = `
@@ -1367,9 +1367,8 @@ Implement secure patient data handling procedures`;
                 const response = await fetch(`/api/workflow/${currentSessionId}`);
                 const data = await response.json();
 
-                if (data.session && data.session.data) {
-                    const sessionData = JSON.parse(data.session.data);
-                    const allContent = sessionData.allContent;
+                if (data.data && data.data.allContent) {
+                    const allContent = data.data.allContent;
 
                     if (allContent) {
                         const statsHtml = `

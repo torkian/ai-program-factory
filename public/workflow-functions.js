@@ -260,19 +260,15 @@ async function loadApproachesIfNeeded() {
 
     try {
         const response = await fetch(`/api/workflow/${currentSessionId}`);
-        const data = await response.json();
+        const apiData = await response.json();
 
-        if (data.session && data.session.data) {
-            const sessionData = JSON.parse(data.session.data);
-
-            // Check if approaches already exist
-            if (sessionData.approaches && sessionData.approaches.length > 0) {
-                displayApproaches(sessionData.approaches);
-            } else {
-                // Generate approaches if they don't exist
-                showMessage('Generating learning approaches...', 'success');
-                await loadApproaches();
-            }
+        // Check if approaches already exist in session data
+        if (apiData.data && apiData.data.generatedApproaches) {
+            displayApproaches(apiData.data.generatedApproaches);
+        } else {
+            // Generate approaches if they don't exist
+            showMessage('Generating learning approaches...', 'success');
+            await loadApproaches();
         }
     } catch (error) {
         console.error('Error loading approaches:', error);
@@ -284,15 +280,11 @@ async function loadArcIfNeeded() {
 
     try {
         const response = await fetch(`/api/workflow/${currentSessionId}`);
-        const data = await response.json();
+        const apiData = await response.json();
 
-        if (data.session && data.session.data) {
-            const sessionData = JSON.parse(data.session.data);
-
-            // Check if arc already exists
-            if (sessionData.learningArc) {
-                displayArc(sessionData.learningArc);
-            }
+        // Check if arc already exists in session data
+        if (apiData.data && apiData.data.learningArc) {
+            displayArc(apiData.data.learningArc);
         }
     } catch (error) {
         console.error('Error loading arc:', error);
@@ -304,15 +296,11 @@ async function loadMatrixIfNeeded() {
 
     try {
         const response = await fetch(`/api/workflow/${currentSessionId}`);
-        const data = await response.json();
+        const apiData = await response.json();
 
-        if (data.session && data.session.data) {
-            const sessionData = JSON.parse(data.session.data);
-
-            // Check if matrix already exists
-            if (sessionData.programMatrix) {
-                displayMatrix(sessionData.programMatrix);
-            }
+        // Check if matrix already exists in session data
+        if (apiData.data && apiData.data.programMatrix) {
+            displayMatrix(apiData.data.programMatrix);
         }
     } catch (error) {
         console.error('Error loading matrix:', error);
@@ -324,15 +312,11 @@ async function loadSampleIfNeeded() {
 
     try {
         const response = await fetch(`/api/workflow/${currentSessionId}`);
-        const data = await response.json();
+        const apiData = await response.json();
 
-        if (data.session && data.session.data) {
-            const sessionData = JSON.parse(data.session.data);
-
-            // Check if sample already exists
-            if (sessionData.sampleContent) {
-                displaySampleContent(sessionData.sampleContent);
-            }
+        // Check if sample already exists in session data
+        if (apiData.data && apiData.data.sampleContent) {
+            displaySampleContent(apiData.data.sampleContent);
         }
     } catch (error) {
         console.error('Error loading sample:', error);
