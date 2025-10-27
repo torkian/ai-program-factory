@@ -408,11 +408,49 @@
                 <div class="prompt-editor">
                     <textarea id="editor-${template.id}">${escapeHtml(template.template)}</textarea>
                 </div>
+                <div id="validation-${template.id}" style="margin-top: 10px;"></div>
                 <div class="actions">
                     <button class="btn btn-success" onclick="savePrompt('${template.id}', '${template.category}')">💾 Save Changes</button>
+                    <button class="btn" onclick="showValidation('${template.id}', '${template.category}')" style="background: #17a2b8; color: white;">✓ Validate</button>
                     <button class="btn btn-secondary" onclick="cancelEditing('${template.id}')">Cancel</button>
                 </div>
             `;
+        }
+
+        function showValidation(id, category) {
+            const textarea = document.getElementById(`editor-${id}`);
+            const template = textarea.value;
+            const validation = validatePrompt(template, category);
+
+            const container = document.getElementById(`validation-${id}`);
+
+            let html = '';
+
+            if (validation.valid && validation.warnings.length === 0) {
+                html = `<div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 6px; border: 2px solid #28a745;">
+                    ✅ <strong>Validation Passed!</strong> No errors or warnings found.
+                </div>`;
+            } else {
+                if (validation.errors.length > 0) {
+                    html += `<div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 6px; border: 2px solid #dc3545; margin-bottom: 10px;">
+                        <strong>❌ Errors (must fix before saving):</strong>
+                        <ul style="margin: 10px 0 0 20px;">
+                            ${validation.errors.map(err => `<li>${err}</li>`).join('')}
+                        </ul>
+                    </div>`;
+                }
+
+                if (validation.warnings.length > 0) {
+                    html += `<div style="background: #fff3cd; color: #856404; padding: 15px; border-radius: 6px; border: 2px solid #ffc107;">
+                        <strong>⚠️ Warnings (can save, but review these):</strong>
+                        <ul style="margin: 10px 0 0 20px;">
+                            ${validation.warnings.map(warn => `<li>${warn}</li>`).join('')}
+                        </ul>
+                    </div>`;
+                }
+            }
+
+            container.innerHTML = html;
         }
 
         function escapeHtml(text) {
@@ -455,13 +493,98 @@
             displayTemplates();
         }
 
+        function validatePrompt(template, category) {
+            const errors = [];
+            const warnings = [];
+
+            // Check if empty
+            if (!template.trim()) {
+                errors.push('Template cannot be empty');
+                return { valid: false, errors, warnings };
+            }
+
+            // Check minimum length
+            if (template.length < 50) {
+                warnings.push('Template is very short (under 50 characters). Is this intentional?');
+            }
+
+            // Check for required variables based on category
+            const requiredVars = {
+                'approach_generation_content': ['clientName', 'industry', 'contentPreview'],
+                'arc_generation': ['clientName', 'industry', 'selectedApproach', 'contentPreview'],
+                'arc_regeneration': ['clientName', 'industry', 'currentArc', 'feedback'],
+                'matrix_generation_content': ['clientName', 'industry', 'contentPreview'],
+                'matrix_regeneration': ['originalMatrix', 'feedback'],
+                'sample_generation': ['clientName', 'industry', 'arcTitle', 'sessionTitle'],
+                'sample_regeneration': ['currentSample', 'feedback'],
+                'batch_generation': ['clientName', 'industry', 'arcTitle', 'sessionTitle']
+            };
+
+            const required = requiredVars[category] || [];
+            const missingVars = required.filter(v => !template.includes(`{{${v}}}`));
+
+            if (missingVars.length > 0) {
+                warnings.push(`Missing recommended variables: ${missingVars.map(v => `{{${v}}}`).join(', ')}`);
+            }
+
+            // Check for unmatched braces
+            const openCount = (template.match(/{{/g) || []).length;
+            const closeCount = (template.match(/}}/g) || []).length;
+
+            if (openCount !== closeCount) {
+                errors.push(`Unmatched variable braces: ${openCount} opening {{, ${closeCount} closing }}`);
+            }
+
+            // Check for invalid variable syntax (spaces, special chars)
+            const invalidVars = template.match(/{{[^}]*[^a-zA-Z0-9_][^}]*}}/g);
+            if (invalidVars) {
+                errors.push(`Invalid variable syntax: ${invalidVars.join(', ')}. Use only letters, numbers, and underscores.`);
+            }
+
+            // Check for common prompt issues
+            if (!template.includes('TASK:') && !template.includes('Task:')) {
+                warnings.push('No "TASK:" section found. Consider adding one for clarity.');
+            }
+
+            if (!template.toLowerCase().includes('json') && category.includes('generation')) {
+                warnings.push('No mention of JSON output format. Make sure output format is specified.');
+            }
+
+            return {
+                valid: errors.length === 0,
+                errors,
+                warnings
+            };
+        }
+
         async function savePrompt(id, category) {
             const textarea = document.getElementById(`editor-${id}`);
             const newTemplate = textarea.value;
 
-            if (!newTemplate.trim()) {
-                showMessage('Template cannot be empty', 'error');
+            // Validate before saving
+            const validation = validatePrompt(newTemplate, category);
+
+            if (!validation.valid) {
+                let message = '❌ Cannot save - validation errors:\n\n';
+                validation.errors.forEach(err => {
+                    message += `• ${err}\n`;
+                });
+                alert(message);
+                showMessage(validation.errors.join(' | '), 'error');
                 return;
+            }
+
+            // Show warnings but allow saving
+            if (validation.warnings.length > 0) {
+                let message = '⚠️ Warnings detected:\n\n';
+                validation.warnings.forEach(warn => {
+                    message += `• ${warn}\n`;
+                });
+                message += '\nContinue saving anyway?';
+
+                if (!confirm(message)) {
+                    return;
+                }
             }
 
             try {
@@ -477,7 +600,7 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    showMessage('Prompt saved successfully! Cache cleared.', 'success');
+                    showMessage('✅ Prompt saved successfully! Cache cleared.', 'success');
 
                     // Update local data
                     const template = templates.find(t => t.id === id);
