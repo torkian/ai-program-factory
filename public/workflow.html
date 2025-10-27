@@ -1296,13 +1296,26 @@ Implement secure patient data handling procedures`;
         function displayMatrix(matrix) {
             const container = document.getElementById('matrix-review-display');
 
+            // Validate matrix structure
+            if (!matrix || !matrix.chapters || !Array.isArray(matrix.chapters)) {
+                container.innerHTML = `
+                    <div style="background: #f8d7da; color: #721c24; padding: 20px; border-radius: 8px; border: 2px solid #dc3545;">
+                        <h4>❌ Error: Invalid Matrix Structure</h4>
+                        <p>The generated matrix does not have the expected chapter structure.</p>
+                        <p style="margin-top: 10px;">This might be due to an AI generation issue. Try regenerating the matrix.</p>
+                    </div>
+                `;
+                console.error('Invalid matrix structure:', matrix);
+                return;
+            }
+
             let html = `
                 <div style="background: white; padding: 25px; border-radius: 8px; border: 2px solid #667eea;">
                     <h3 style="color: #667eea; margin-bottom: 10px;">${matrix.programTitle}</h3>
                     <p style="margin-bottom: 20px; color: #666;">${matrix.overview}</p>
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
-                        <div><strong>Chapters:</strong> ${matrix.totalChapters}</div>
+                        <div><strong>Chapters:</strong> ${matrix.totalChapters || matrix.chapters.length}</div>
                         <div><strong>Total Sessions:</strong> ${matrix.totalSessions}</div>
                         <div><strong>Target Audience:</strong> ${matrix.targetAudience}</div>
                     </div>
