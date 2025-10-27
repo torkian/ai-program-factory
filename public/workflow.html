@@ -398,27 +398,69 @@
                 <h2>Client Brief
                     <button type="button" class="btn btn-example" onclick="fillExampleBrief()">Fill Example</button>
                 </h2>
+
+                <div style="background: #f0f3ff; padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 2px solid #667eea;">
+                    <h4 style="color: #667eea; margin-bottom: 10px;">📄 Upload Briefing Document (Optional)</h4>
+                    <p style="margin-bottom: 10px; font-size: 0.9rem;">If you have a completed briefing interview document, upload it here. We'll extract the information automatically.</p>
+                    <input type="file" id="briefDocument" accept=".pdf,.docx,.txt,.md" style="margin-bottom: 10px;">
+                    <button type="button" class="btn btn-secondary" onclick="uploadBriefDocument()" style="font-size: 0.9rem;">Upload & Auto-Fill</button>
+                </div>
+
                 <form id="brief-form">
+                    <h3 style="margin-bottom: 15px; color: #667eea;">Basic Information</h3>
+
                     <div class="form-group">
-                        <label for="clientName">Client Name</label>
+                        <label for="clientName">Client Name *</label>
                         <input type="text" id="clientName" required placeholder="e.g., Acme Corporation">
                         <div class="helper-text">Enter the name of your client or organization</div>
                     </div>
+
                     <div class="form-group">
-                        <label for="industry">Industry</label>
+                        <label for="industry">Industry *</label>
                         <input type="text" id="industry" required placeholder="e.g., Healthcare, Technology, Finance">
                         <div class="helper-text">What industry is this training for?</div>
                     </div>
+
+                    <h3 style="margin: 30px 0 15px 0; color: #667eea;">Business Context</h3>
+
+                    <div class="form-group">
+                        <label for="businessContext">Business Context</label>
+                        <textarea id="businessContext" rows="4" placeholder="Describe the client's current business situation, market position, and organizational context..."></textarea>
+                        <div class="helper-text">What's happening in the client's business? What's their current situation?</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="businessChallenges">Business Challenges</label>
+                        <textarea id="businessChallenges" rows="4" placeholder="What specific business challenges are they facing that this training should address?"></textarea>
+                        <div class="helper-text">What problems or pain points is the client experiencing?</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="learningGap">Learning Gap / Knowledge Need</label>
+                        <textarea id="learningGap" rows="3" placeholder="What specific knowledge or skills gap needs to be filled?"></textarea>
+                        <div class="helper-text">What don't learners currently know that they need to know?</div>
+                    </div>
+
+                    <h3 style="margin: 30px 0 15px 0; color: #667eea;">Learning Design</h3>
+
+                    <div class="form-group">
+                        <label for="audience">Target Audience *</label>
+                        <input type="text" id="audience" required placeholder="e.g., Healthcare professionals, IT staff, Sales team">
+                        <div class="helper-text">Who will be taking this training? Include roles and experience levels.</div>
+                    </div>
+
                     <div class="form-group">
                         <label for="objectives">Learning Objectives (one per line)</label>
                         <textarea id="objectives" rows="4" placeholder="Understand HIPAA compliance requirements&#10;Apply data privacy best practices&#10;Recognize potential security threats"></textarea>
-                        <div class="helper-text">What should learners be able to do after completing this training?</div>
+                        <div class="helper-text">What should learners be able to DO after completing this training?</div>
                     </div>
+
                     <div class="form-group">
-                        <label for="audience">Target Audience</label>
-                        <input type="text" id="audience" placeholder="e.g., Healthcare professionals, IT staff">
-                        <div class="helper-text">Who will be taking this training?</div>
+                        <label for="additionalContext">Additional Context</label>
+                        <textarea id="additionalContext" rows="3" placeholder="Any other relevant information, constraints, or requirements..."></textarea>
+                        <div class="helper-text">Special requirements, deadlines, existing materials, etc.</div>
                     </div>
+
                     <button type="submit" class="btn btn-primary">Save Brief</button>
                 </form>
             </div>
@@ -924,7 +966,12 @@
                 clientName: document.getElementById('clientName').value,
                 industry: document.getElementById('industry').value,
                 objectives: document.getElementById('objectives').value.split('\n').filter(o => o.trim()),
-                audience: document.getElementById('audience').value
+                audience: document.getElementById('audience').value,
+                // New fields for business context
+                businessContext: document.getElementById('businessContext').value,
+                businessChallenges: document.getElementById('businessChallenges').value,
+                learningGap: document.getElementById('learningGap').value,
+                additionalContext: document.getElementById('additionalContext').value
             };
 
             showLoading(true);
@@ -937,7 +984,7 @@
                     body: JSON.stringify({
                         clientName: brief.clientName,
                         industry: brief.industry,
-                        brief: brief  // Nest the full brief object
+                        brief: brief  // Nest the full brief object with all new fields
                     })
                 });
 
@@ -1127,15 +1174,68 @@
             setTimeout(() => container.innerHTML = '', 5000);
         }
 
+        // Upload and process briefing document
+        async function uploadBriefDocument() {
+            const fileInput = document.getElementById('briefDocument');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showMessage('Please select a briefing document to upload', 'error');
+                return;
+            }
+
+            showLoading(true);
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const response = await fetch('/api/workflow/brief/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Auto-fill form fields with extracted data
+                    if (data.brief.clientName) document.getElementById('clientName').value = data.brief.clientName;
+                    if (data.brief.industry) document.getElementById('industry').value = data.brief.industry;
+                    if (data.brief.businessContext) document.getElementById('businessContext').value = data.brief.businessContext;
+                    if (data.brief.businessChallenges) document.getElementById('businessChallenges').value = data.brief.businessChallenges;
+                    if (data.brief.learningGap) document.getElementById('learningGap').value = data.brief.learningGap;
+                    if (data.brief.audience) document.getElementById('audience').value = data.brief.audience;
+                    if (data.brief.objectives) document.getElementById('objectives').value = Array.isArray(data.brief.objectives) ? data.brief.objectives.join('\n') : data.brief.objectives;
+                    if (data.brief.additionalContext) document.getElementById('additionalContext').value = data.brief.additionalContext;
+
+                    showMessage('Briefing document processed! Review and edit the extracted information.', 'success');
+                } else {
+                    showMessage(data.error || 'Error processing briefing document', 'error');
+                }
+            } catch (error) {
+                console.error('Error uploading briefing document:', error);
+                showMessage('Error uploading briefing document: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
         // Fill example brief data
         function fillExampleBrief() {
             document.getElementById('clientName').value = 'TechCorp Industries';
             document.getElementById('industry').value = 'Healthcare Technology';
+            document.getElementById('businessContext').value = 'TechCorp is a mid-size healthcare IT provider experiencing rapid growth. They recently acquired two smaller companies and are integrating systems while maintaining HIPAA compliance across all platforms.';
+            document.getElementById('businessChallenges').value = `Recent security audit revealed gaps in employee knowledge about data protection
+Staff from acquired companies not familiar with TechCorp's security protocols
+Increasing regulatory scrutiny requiring documented training programs
+Remote work has created new data security challenges`;
+            document.getElementById('learningGap').value = 'Many employees lack comprehensive understanding of HIPAA requirements, especially newer staff and those from acquired companies. Need to standardize knowledge across entire organization.';
             document.getElementById('objectives').value = `Understand HIPAA compliance requirements
 Apply data privacy and security best practices
 Recognize and respond to potential security threats
 Implement secure patient data handling procedures`;
-            document.getElementById('audience').value = 'Healthcare IT professionals and administrators';
+            document.getElementById('audience').value = 'Healthcare IT professionals and administrators (experience levels: junior to senior)';
+            document.getElementById('additionalContext').value = 'Training must be completed within 60 days. Prefer modular approach so employees can complete in stages. Will integrate into existing LMS.';
             showMessage('Example data filled! You can edit it before saving.', 'success');
         }
 

@@ -10,6 +10,7 @@ import { approachGenerator } from '../services/approachGenerator';
 import { arcGenerator } from '../services/arcGenerator';
 import { sampleGenerator } from '../services/sampleGenerator';
 import { batchGenerator } from '../services/batchGenerator';
+import { briefExtractor } from '../services/briefExtractor';
 
 const router = Router();
 
@@ -134,6 +135,40 @@ router.delete('/:sessionId', async (req, res) => {
     });
   } catch (error: any) {
     console.error('Error deleting session:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Upload briefing document and extract information
+ */
+router.post('/brief/upload', upload.single('file'), async (req, res) => {
+  try {
+    const file = req.file as Express.Multer.File;
+
+    if (!file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    console.log(`Processing briefing document: ${file.originalname}`);
+
+    // Process the uploaded file
+    const processedFile = await fileProcessor.processFiles([file]);
+    const documentContent = processedFile[0].extractedText;
+
+    // Extract structured brief information using AI
+    const extractedBrief = await briefExtractor.extractFromDocument(documentContent);
+
+    // Clean up uploaded file
+    await fileProcessor.cleanupFiles([file]);
+
+    res.json({
+      success: true,
+      brief: extractedBrief,
+      message: 'Briefing document processed successfully'
+    });
+  } catch (error: any) {
+    console.error('Error processing briefing document:', error);
     res.status(500).json({ error: error.message });
   }
 });
