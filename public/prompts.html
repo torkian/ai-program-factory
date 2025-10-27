@@ -284,6 +284,7 @@
             <a href="/workflow.html">← Back to Workflow</a>
             <a href="#" onclick="location.reload()">🔄 Refresh</a>
             <a href="#" onclick="clearAllCache()">🗑️ Clear Cache</a>
+            <a href="#" onclick="resetAllPrompts()" style="background: rgba(220, 53, 69, 0.3);">⚠️ Reset All to Defaults</a>
         </div>
 
         <div class="admin-container">
@@ -308,7 +309,20 @@
         async function loadTemplates() {
             try {
                 const response = await fetch('/api/prompts');
-                templates = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                // Ensure we have an array
+                if (!Array.isArray(data)) {
+                    console.error('API returned non-array:', data);
+                    throw new Error('Invalid response format from API');
+                }
+
+                templates = data;
 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('prompt-list').style.display = 'block';
@@ -386,13 +400,19 @@
                     <p>Use <code>{{variableName}}</code> for dynamic content. Common variables: <code>{{clientName}}</code>, <code>{{industry}}</code>, <code>{{objectives}}</code>, <code>{{audience}}</code></p>
                 </div>
                 <div class="prompt-editor">
-                    <textarea id="editor-${template.id}">${template.template}</textarea>
+                    <textarea id="editor-${template.id}">${escapeHtml(template.template)}</textarea>
                 </div>
                 <div class="actions">
                     <button class="btn btn-success" onclick="savePrompt('${template.id}', '${template.category}')">💾 Save Changes</button>
                     <button class="btn btn-secondary" onclick="cancelEditing('${template.id}')">Cancel</button>
                 </div>
             `;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         function extractVariables(template) {
@@ -498,6 +518,37 @@
             } catch (error) {
                 console.error('Error clearing cache:', error);
                 showMessage('Error clearing cache: ' + error.message, 'error');
+            }
+        }
+
+        async function resetAllPrompts() {
+            if (!confirm('⚠️ WARNING: This will reset ALL prompts to their default values.\n\nAny customizations you made will be PERMANENTLY LOST.\n\nAre you absolutely sure?')) {
+                return;
+            }
+
+            if (!confirm('This is your FINAL confirmation.\n\nReset all prompts to defaults?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/prompts/reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ confirm: 'RESET_ALL_PROMPTS' })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage('✅ All prompts reset to defaults! Reloading...', 'success');
+                    // Reload page to show new prompts
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showMessage(data.error || 'Error resetting prompts', 'error');
+                }
+            } catch (error) {
+                console.error('Error resetting prompts:', error);
+                showMessage('Error resetting prompts: ' + error.message, 'error');
             }
         }
 

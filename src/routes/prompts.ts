@@ -133,4 +133,42 @@ router.post('/cache/clear', async (req, res) => {
   }
 });
 
+/**
+ * Reset all prompts to defaults (dangerous - requires confirmation)
+ */
+router.post('/reset', async (req, res) => {
+  try {
+    const { confirm } = req.body;
+
+    if (confirm !== 'RESET_ALL_PROMPTS') {
+      return res.status(400).json({
+        error: 'Confirmation required. Send { confirm: "RESET_ALL_PROMPTS" }'
+      });
+    }
+
+    // Import getDatabase to delete and reseed
+    const { getDatabase } = require('../database/init');
+    const { seedPromptTemplates } = require('../database/seed');
+
+    const db = await getDatabase();
+
+    // Delete all existing templates
+    await db.run('DELETE FROM prompt_templates');
+
+    // Reseed with defaults
+    await seedPromptTemplates();
+
+    // Clear all caches
+    promptTemplateService.clearCache();
+
+    res.json({
+      success: true,
+      message: 'All prompts reset to defaults successfully'
+    });
+  } catch (error: any) {
+    console.error('Error resetting prompts:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export { router };
