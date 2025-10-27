@@ -81,7 +81,7 @@ router.post('/', async (req, res) => {
     // Save brief data if provided
     if (brief) {
       await workflowManager.saveStepData(sessionId, 'brief', brief);
-      await workflowManager.advanceToStep(sessionId, 'route_selection');
+      await workflowManager.advanceToStep(sessionId, 'framework_selection');
     }
 
     const session = await workflowManager.getWorkflowSession(sessionId);
@@ -89,7 +89,7 @@ router.post('/', async (req, res) => {
     res.json({
       sessionId,
       session,
-      nextStep: brief ? 'route_selection' : 'brief'
+      nextStep: brief ? 'framework_selection' : 'brief'
     });
   } catch (error: any) {
     console.error('Error creating session:', error);

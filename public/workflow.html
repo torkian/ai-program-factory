@@ -1013,7 +1013,7 @@
                 const data = await response.json();
                 currentSessionId = data.sessionId;
                 showMessage('Brief saved successfully!', 'success');
-                showStep('route_selection');
+                showStep(data.nextStep);
             } catch (error) {
                 console.error('Error saving brief:', error);
                 showMessage('Error saving brief', 'error');
