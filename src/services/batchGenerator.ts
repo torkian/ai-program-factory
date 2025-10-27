@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import { promptTemplateService, PromptCategory } from './promptTemplateService';
 import { ProgramMatrix } from './matrixGenerator';
 import { SampleContent } from './sampleGenerator';
+import { videoScriptGenerator, VideoScript } from './videoScriptGenerator';
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -65,6 +66,7 @@ export interface SessionContent {
       explanation: string;
     }[];
   };
+  videoScript?: VideoScript; // Optional video script
 }
 
 export interface BatchContent {
@@ -200,10 +202,25 @@ export class BatchGenerator {
 
     const result = JSON.parse(response.choices[0].message.content || '{}');
 
+    // Generate video script from the article
+    let videoScript;
+    try {
+      videoScript = await videoScriptGenerator.generateScript(
+        session.title,
+        result.article?.content || '',
+        session.estimatedDuration,
+        brief
+      );
+    } catch (error) {
+      console.error(`Error generating video script for session ${session.sessionNumber}:`, error);
+      // Video script is optional, continue without it
+    }
+
     return {
       sessionNumber: session.sessionNumber,
       article: result.article,
-      quiz: result.quiz
+      quiz: result.quiz,
+      videoScript
     };
   }
 
@@ -364,6 +381,16 @@ In the following session, we'll build on these foundations to explore more advan
             ${session.article.content.split('\n').map(para => para.trim() ? `<p>${para}</p>` : '').join('\n')}
         </div>
 
+        ${session.videoScript ? `
+        <div style="background: #f0f3ff; padding: 20px; border-radius: 8px; margin-top: 30px; border: 2px solid #667eea;">
+            <h3 style="color: #667eea;">📹 Video Script</h3>
+            <p><em>Duration: ${session.videoScript.duration} | Words: ${session.videoScript.estimatedWordCount}</em></p>
+            <div style="background: white; padding: 15px; border-radius: 6px; margin-top: 15px; white-space: pre-wrap; font-family: monospace;">
+${session.videoScript.script}
+            </div>
+        </div>
+        ` : ''}
+
         <div class="quiz">
             <h3>Quiz Questions</h3>
             ${session.quiz.questions.map((q, i) => `
@@ -403,6 +430,13 @@ In the following session, we'll build on these foundations to explore more advan
       markdown += `## Session ${session.sessionNumber}: ${session.article.title}\n\n`;
       markdown += `*Reading Time: ${session.article.readingTime}*\n\n`;
       markdown += `${session.article.content}\n\n`;
+
+      if (session.videoScript) {
+        markdown += `### 📹 Video Script\n\n`;
+        markdown += `*Duration: ${session.videoScript.duration} | Words: ${session.videoScript.estimatedWordCount}*\n\n`;
+        markdown += `\`\`\`\n${session.videoScript.script}\n\`\`\`\n\n`;
+      }
+
       markdown += `### Quiz Questions\n\n`;
 
       session.quiz.questions.forEach((q, i) => {

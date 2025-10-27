@@ -18,7 +18,10 @@ export enum PromptCategory {
   MATRIX_REGENERATION = 'matrix_regeneration',
   SAMPLE_GENERATION = 'sample_generation',
   SAMPLE_REGENERATION = 'sample_regeneration',
-  BATCH_GENERATION = 'batch_generation'
+  BATCH_GENERATION = 'batch_generation',
+  VIDEO_SCRIPT_GENERATION = 'video_script_generation',
+  SESSION_DESCRIPTION = 'session_description',
+  CHAPTER_DESCRIPTION = 'chapter_description'
 }
 
 export class PromptTemplateService {
