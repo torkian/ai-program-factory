@@ -1292,7 +1292,7 @@ Implement secure patient data handling procedures`;
             }
         }
 
-        // Display matrix
+        // Display matrix with chapter structure
         function displayMatrix(matrix) {
             const container = document.getElementById('matrix-review-display');
 
@@ -1302,31 +1302,55 @@ Implement secure patient data handling procedures`;
                     <p style="margin-bottom: 20px; color: #666;">${matrix.overview}</p>
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+                        <div><strong>Chapters:</strong> ${matrix.totalChapters}</div>
                         <div><strong>Total Sessions:</strong> ${matrix.totalSessions}</div>
                         <div><strong>Target Audience:</strong> ${matrix.targetAudience}</div>
                     </div>
             `;
 
-            matrix.sessions.forEach(session => {
+            // Display each chapter with its sessions
+            matrix.chapters.forEach(chapter => {
                 html += `
-                    <div class="matrix-session">
-                        <h4>Session ${session.sessionNumber}: ${session.title}</h4>
-                        <p><strong>Duration:</strong> ${session.estimatedDuration}</p>
+                    <div style="margin: 30px 0; padding: 25px; background: #f0f3ff; border-radius: 8px; border: 2px solid #667eea;">
+                        <h3 style="color: #667eea; margin-bottom: 10px;">Chapter ${chapter.chapterNumber}: ${chapter.title}</h3>
+                        <p style="margin-bottom: 15px; color: #555;">${chapter.description}</p>
 
-                        <div style="margin-top: 15px;">
-                            <strong>Learning Objectives:</strong>
-                            <ul>${session.objectives.map(obj => `<li>${obj}</li>`).join('')}</ul>
+                        <div style="background: white; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                            <strong>Chapter Goals:</strong>
+                            <ul style="margin: 10px 0 0 20px;">
+                                ${chapter.goals.map(goal => `<li>${goal}</li>`).join('')}
+                            </ul>
                         </div>
 
-                        <div style="margin-top: 15px;">
-                            <strong>Topics Covered:</strong>
-                            <ul>${session.topics.map(topic => `<li>${topic}</li>`).join('')}</ul>
-                        </div>
+                        ${chapter.sessions.map(session => `
+                            <div class="matrix-session" style="background: white;">
+                                <h4>Session ${session.sessionNumber}: ${session.title}</h4>
+                                <p><strong>Duration:</strong> ${session.estimatedDuration}</p>
+                                ${session.prerequisites ? `<p style="font-size: 0.9rem; color: #856404; background: #fff3cd; padding: 8px; border-radius: 4px; margin-top: 10px;"><strong>Prerequisites:</strong> ${session.prerequisites}</p>` : ''}
 
-                        <div style="margin-top: 15px;">
-                            <strong>Key Takeaways:</strong>
-                            <ul>${session.keyTakeaways.map(take => `<li>${take}</li>`).join('')}</ul>
-                        </div>
+                                <div style="margin-top: 15px;">
+                                    <strong>Learning Objectives:</strong>
+                                    <ul>${session.objectives.map(obj => `<li>${obj}</li>`).join('')}</ul>
+                                </div>
+
+                                <div style="margin-top: 15px;">
+                                    <strong>Topics Covered:</strong>
+                                    <ul>${session.topics.map(topic => `<li>${topic}</li>`).join('')}</ul>
+                                </div>
+
+                                <div style="margin-top: 15px;">
+                                    <strong>Key Takeaways:</strong>
+                                    <ul>${session.keyTakeaways.map(take => `<li>${take}</li>`).join('')}</ul>
+                                </div>
+
+                                ${session.contentOutline ? `
+                                <div style="margin-top: 15px; padding: 12px; background: #e7f3ff; border-left: 4px solid #667eea; border-radius: 4px;">
+                                    <strong>Content Outline:</strong>
+                                    <p style="margin-top: 8px; font-size: 0.95rem;">${session.contentOutline}</p>
+                                </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
                     </div>
                 `;
             });
@@ -1417,6 +1441,7 @@ Implement secure patient data handling procedures`;
                     if (programMatrix) {
                         const summaryHtml = `
                             <p><strong>Program:</strong> ${programMatrix.programTitle}</p>
+                            <p><strong>Chapters:</strong> ${programMatrix.totalChapters}</p>
                             <p><strong>Total Sessions:</strong> ${programMatrix.totalSessions}</p>
                             <p><strong>Target Audience:</strong> ${programMatrix.targetAudience}</p>
                             <p style="margin-top: 15px;">Each session will include:</p>

@@ -75,26 +75,45 @@ CLIENT BRIEF:
 - Industry: {{industry}}
 - Objectives: {{objectives}}
 - Audience: {{audience}}
+- Business Context: {{businessContext}}
+- Business Challenges: {{businessChallenges}}
+- Learning Gap: {{learningGap}}
 
 EXTRACTED CONTENT:
 {{contentPreview}}
 {{arcContext}}
 
 TASK:
-Analyze the extracted content and create a structured training program{{arcContextNote}}. Return JSON with:
+Analyze the content and create a structured training program{{arcContextNote}} organized into CHAPTERS containing SESSIONS.
+
+CHAPTER DEFINITION:
+- A chapter represents a major thematic area or competency domain
+- Contains 3-5 related sessions that build toward chapter goals
+- Has clear learning progression within it
+
+Return JSON with:
 - programTitle: Concise program title
 - overview: 2-3 sentence program description
-- totalSessions: Number of sessions (typically 3-8)
+- totalChapters: Number of chapters (typically 3-4, can be more for extensive programs)
+- totalSessions: Total number of sessions across all chapters
 - targetAudience: Who this is for
-- sessions: Array of session objects with:
-  - sessionNumber: Session number
-  - title: Session title
-  - objectives: Array of 2-4 learning objectives for this session
-  - topics: Array of 3-6 topics covered
-  - estimatedDuration: Duration (e.g., "45 minutes", "1 hour")
-  - keyTakeaways: Array of 2-3 main takeaways
+- chapters: Array of chapter objects with:
+  - chapterNumber: Chapter number (1, 2, 3...)
+  - title: Chapter title representing the theme/domain
+  - description: What this chapter covers (2 sentences)
+  - goals: Array of 2-3 main goals for this chapter
+  - sessions: Array of session objects with:
+    - sessionNumber: Overall session number (1, 2, 3... across entire program)
+    - chapterNumber: Which chapter this belongs to
+    - title: Session title
+    - objectives: Array of 2-4 learning objectives for this session
+    - topics: Array of 3-6 topics covered
+    - estimatedDuration: Duration (e.g., "45 minutes", "1 hour")
+    - keyTakeaways: Array of 2-3 main takeaways
+    - contentOutline: Detailed 3-5 sentence outline of what content this session should cover
+    - prerequisites: What learners should know before this session (optional)
 
-Structure the content logically, building from fundamentals to advanced concepts.`
+Structure logically: Chapters progress from fundamentals to advanced; sessions within chapters build progressively.`
     },
     {
       id: 'sample-gen-001',

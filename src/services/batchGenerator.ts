@@ -93,10 +93,11 @@ export class BatchGenerator {
 
     const sessions: SessionContent[] = [];
 
-    // Generate content for each session in the matrix
-    for (let i = 0; i < programMatrix.sessions.length; i++) {
-      const session = programMatrix.sessions[i];
-      const arcPhase = learningArc.progression[Math.min(i, learningArc.progression.length - 1)];
+    // Generate content for each session across all chapters
+    let sessionIndex = 0;
+    for (const chapter of programMatrix.chapters) {
+      for (const session of chapter.sessions) {
+        const arcPhase = learningArc.progression[Math.min(sessionIndex, learningArc.progression.length - 1)];
 
       console.log(`Generating session ${session.sessionNumber}/${programMatrix.totalSessions}: ${session.title}`);
 
@@ -107,14 +108,17 @@ export class BatchGenerator {
           arcPhase,
           learningArc,
           approvedSample,
-          i === 0 // First session uses approved sample as template
+          sessionIndex === 0 // First session uses approved sample as template
         );
 
         sessions.push(sessionContent);
       } catch (error) {
         console.error(`Error generating session ${session.sessionNumber}:`, error);
         // Use fallback content for this session
-        sessions.push(this.getFallbackSessionContent(session, i === 0 ? approvedSample : null));
+        sessions.push(this.getFallbackSessionContent(session, sessionIndex === 0 ? approvedSample : null));
+      }
+
+        sessionIndex++;
       }
     }
 

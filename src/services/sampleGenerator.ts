@@ -94,7 +94,8 @@ export class SampleGenerator {
     try {
       console.log('Generating sample article and quiz...');
 
-      const firstSession = programMatrix.sessions[0];
+      // Get first session from first chapter
+      const firstSession = programMatrix.chapters[0].sessions[0];
 
       // Load prompt template
       const promptTemplate = await promptTemplateService.getPrompt(
@@ -160,7 +161,8 @@ export class SampleGenerator {
     try {
       console.log('Regenerating sample with feedback...');
 
-      const firstSession = programMatrix.sessions[0];
+      // Get first session from first chapter
+      const firstSession = programMatrix.chapters[0].sessions[0];
 
       // Load prompt template
       const promptTemplate = await promptTemplateService.getPrompt(
