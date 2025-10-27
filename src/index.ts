@@ -5,6 +5,7 @@ import path from "path";
 import { router as programRouter } from "./routes/program-with-progress";
 import { router as sessionRouter } from "./routes/session";
 import { router as workflowRouter } from "./routes/workflow";
+import { router as promptsRouter } from "./routes/prompts";
 import { initDatabase } from "./database/init";
 import { seedPromptTemplates } from "./database/seed";
 
@@ -29,6 +30,7 @@ app.use((req, res, next) => {
 app.use("/api/programs", programRouter);
 app.use("/api/sessions", sessionRouter);
 app.use("/api/workflow", workflowRouter);
+app.use("/api/prompts", promptsRouter);
 
 app.get("/", (req, res) => {
   res.json({

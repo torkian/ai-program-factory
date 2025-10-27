@@ -1,0 +1,136 @@
+import { Router } from 'express';
+import { promptTemplateService } from '../services/promptTemplateService';
+import {
+  getAllPromptTemplates,
+  getPromptTemplate,
+  createPromptTemplate,
+  updatePromptTemplate
+} from '../database/queries';
+
+const router = Router();
+
+/**
+ * Get all prompt templates
+ */
+router.get('/', async (req, res) => {
+  try {
+    const templates = await getAllPromptTemplates();
+    res.json(templates);
+  } catch (error: any) {
+    console.error('Error fetching prompt templates:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Get a single prompt template by ID
+ */
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const template = await getPromptTemplate(id);
+
+    if (!template) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+
+    res.json(template);
+  } catch (error: any) {
+    console.error('Error fetching prompt template:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Create a new prompt template
+ */
+router.post('/', async (req, res) => {
+  try {
+    const { id, name, category, template } = req.body;
+
+    if (!id || !name || !category || !template) {
+      return res.status(400).json({
+        error: 'Missing required fields: id, name, category, template'
+      });
+    }
+
+    await createPromptTemplate(id, name, category, template);
+
+    // Clear cache for this category
+    promptTemplateService.clearCache(category);
+
+    res.json({
+      success: true,
+      message: 'Prompt template created successfully'
+    });
+  } catch (error: any) {
+    console.error('Error creating prompt template:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Update an existing prompt template
+ */
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { template, category } = req.body;
+
+    if (!template) {
+      return res.status(400).json({ error: 'Template content is required' });
+    }
+
+    // Check if template exists
+    const existing = await getPromptTemplate(id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+
+    await updatePromptTemplate(id, template);
+
+    // Clear cache for this category
+    if (category) {
+      promptTemplateService.clearCache(category);
+    } else {
+      // If category not provided, clear all cache to be safe
+      promptTemplateService.clearCache();
+    }
+
+    res.json({
+      success: true,
+      message: 'Prompt template updated successfully'
+    });
+  } catch (error: any) {
+    console.error('Error updating prompt template:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Clear prompt cache (useful after bulk updates)
+ */
+router.post('/cache/clear', async (req, res) => {
+  try {
+    const { category } = req.body;
+
+    if (category) {
+      promptTemplateService.clearCache(category);
+      res.json({
+        success: true,
+        message: `Cache cleared for category: ${category}`
+      });
+    } else {
+      promptTemplateService.clearCache();
+      res.json({
+        success: true,
+        message: 'All cache cleared'
+      });
+    }
+  } catch (error: any) {
+    console.error('Error clearing cache:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+export { router };
