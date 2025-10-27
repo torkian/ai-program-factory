@@ -1,10 +1,54 @@
 import OpenAI from 'openai';
+import { promptTemplateService, PromptCategory } from './promptTemplateService';
 import { ProgramMatrix } from './matrixGenerator';
 import { SampleContent } from './sampleGenerator';
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
+
+// Default prompt template
+const DEFAULT_BATCH_GENERATION_PROMPT = `You are a training content creator generating a complete learning session.
+
+CLIENT BRIEF:
+- Client: {{clientName}}
+- Industry: {{industry}}
+- Audience: {{audience}}
+
+LEARNING ARC CONTEXT:
+- Overall Theme: {{arcTitle}}
+- Narrative: {{arcNarrative}}
+- Current Phase: {{currentPhase}}
+
+SESSION TO CREATE:
+- Session {{sessionNumber}}: {{sessionTitle}}
+- Duration: {{sessionDuration}}
+- Objectives: {{sessionObjectives}}
+- Topics: {{sessionTopics}}
+- Key Takeaways: {{sessionTakeaways}}
+
+QUALITY TEMPLATE (match this style and quality):
+Sample Article Length: {{sampleWordCount}} words
+Sample Quiz Questions: {{sampleQuizCount}}
+Sample Question Style: {{sampleQuestionStyle}}
+
+TASK:
+Create a complete training session with article and quiz that matches the approved sample's quality and style.
+
+Return JSON with:
+- article:
+  - title: Engaging title for this session
+  - content: Full article content (800-1200 words) with paragraphs, examples, practical tips
+  - readingTime: Estimated reading time
+
+- quiz:
+  - questions: Array of {{sampleQuizCount}} multiple choice questions with:
+    - question: The question text
+    - options: Array of 4 answer choices
+    - correctIndex: Index of correct answer (0-3)
+    - explanation: Why this is correct (1-2 sentences)
+
+Ensure content builds on previous sessions and aligns with the learning arc progression.`;
 
 export interface SessionContent {
   sessionNumber: number;
@@ -109,47 +153,29 @@ export class BatchGenerator {
       };
     }
 
-    const prompt = `You are a training content creator generating a complete learning session.
+    // Load prompt template
+    const promptTemplate = await promptTemplateService.getPrompt(
+      PromptCategory.BATCH_GENERATION,
+      DEFAULT_BATCH_GENERATION_PROMPT
+    );
 
-CLIENT BRIEF:
-- Client: ${brief.clientName}
-- Industry: ${brief.industry}
-- Audience: ${brief.audience || 'General employees'}
-
-LEARNING ARC CONTEXT:
-- Overall Theme: ${learningArc.title}
-- Narrative: ${learningArc.narrative}
-- Current Phase: ${arcPhase.phase} - ${arcPhase.focus}
-
-SESSION TO CREATE:
-- Session ${session.sessionNumber}: ${session.title}
-- Duration: ${session.estimatedDuration}
-- Objectives: ${session.objectives.join(', ')}
-- Topics: ${session.topics.join(', ')}
-- Key Takeaways: ${session.keyTakeaways.join(', ')}
-
-QUALITY TEMPLATE (match this style and quality):
-Sample Article Length: ${approvedSample.article.content.split(/\s+/).length} words
-Sample Quiz Questions: ${approvedSample.quiz.questions.length}
-Sample Question Style: ${approvedSample.quiz.questions[0].question.substring(0, 100)}...
-
-TASK:
-Create a complete training session with article and quiz that matches the approved sample's quality and style.
-
-Return JSON with:
-- article:
-  - title: Engaging title for this session
-  - content: Full article content (800-1200 words) with paragraphs, examples, practical tips
-  - readingTime: Estimated reading time
-
-- quiz:
-  - questions: Array of ${approvedSample.quiz.questions.length} multiple choice questions with:
-    - question: The question text
-    - options: Array of 4 answer choices
-    - correctIndex: Index of correct answer (0-3)
-    - explanation: Why this is correct (1-2 sentences)
-
-Ensure content builds on previous sessions and aligns with the learning arc progression.`;
+    const prompt = promptTemplateService.buildPrompt(promptTemplate, {
+      clientName: brief.clientName,
+      industry: brief.industry,
+      audience: brief.audience || 'General employees',
+      arcTitle: learningArc.title,
+      arcNarrative: learningArc.narrative,
+      currentPhase: `${arcPhase.phase} - ${arcPhase.focus}`,
+      sessionNumber: session.sessionNumber,
+      sessionTitle: session.title,
+      sessionDuration: session.estimatedDuration,
+      sessionObjectives: session.objectives.join(', '),
+      sessionTopics: session.topics.join(', '),
+      sessionTakeaways: session.keyTakeaways.join(', '),
+      sampleWordCount: approvedSample.article.content.split(/\s+/).length,
+      sampleQuizCount: approvedSample.quiz.questions.length,
+      sampleQuestionStyle: approvedSample.quiz.questions[0].question.substring(0, 100) + '...'
+    });
 
     const response = await client.chat.completions.create({
       model: 'gpt-4o',

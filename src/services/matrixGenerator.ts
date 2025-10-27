@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { promptTemplateService, PromptCategory } from './promptTemplateService';
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -22,36 +23,21 @@ export interface ProgramMatrix {
   generatedAt: string;
 }
 
-export class MatrixGenerator {
-  /**
-   * Generate a program matrix from extracted content (Route A)
-   */
-  async generateFromContent(
-    brief: any,
-    extractedContent: string,
-    learningArc?: any
-  ): Promise<ProgramMatrix> {
-    try {
-      console.log('Generating matrix from extracted content...');
-
-      const arcContext = learningArc
-        ? `\n\nLEARNING ARC TO FOLLOW:\n- Title: ${learningArc.title}\n- Narrative: ${learningArc.narrative}\n- Progression: ${learningArc.progression.map((p: any, i: number) => `\n  ${i + 1}. ${p.phase}: ${p.focus}`).join('')}\n\nStructure the sessions to follow this narrative arc and progression.`
-        : '';
-
-      const prompt = `You are an instructional designer creating a training program structure.
+// Default prompt templates
+const DEFAULT_MATRIX_FROM_CONTENT_PROMPT = `You are an instructional designer creating a training program structure.
 
 CLIENT BRIEF:
-- Client: ${brief.clientName}
-- Industry: ${brief.industry}
-- Objectives: ${brief.objectives || 'General training'}
-- Audience: ${brief.audience || 'General employees'}
+- Client: {{clientName}}
+- Industry: {{industry}}
+- Objectives: {{objectives}}
+- Audience: {{audience}}
 
 EXTRACTED CONTENT:
-${extractedContent.substring(0, 8000)} ${extractedContent.length > 8000 ? '...(truncated)' : ''}
-${arcContext}
+{{contentPreview}}
+{{arcContext}}
 
 TASK:
-Analyze the extracted content and create a structured training program${learningArc ? ' following the learning arc narrative' : ''}. Return JSON with:
+Analyze the extracted content and create a structured training program{{arcContextNote}}. Return JSON with:
 - programTitle: Concise program title
 - overview: 2-3 sentence program description
 - totalSessions: Number of sessions (typically 3-8)
@@ -65,6 +51,52 @@ Analyze the extracted content and create a structured training program${learning
   - keyTakeaways: Array of 2-3 main takeaways
 
 Structure the content logically, building from fundamentals to advanced concepts.`;
+
+const DEFAULT_MATRIX_REGENERATION_PROMPT = `You are an instructional designer revising a training program.
+
+ORIGINAL PROGRAM:
+{{originalMatrix}}
+
+USER FEEDBACK:
+{{feedback}}
+
+TASK:
+Revise the program based on the feedback. Maintain the same JSON structure but incorporate the requested changes.`;
+
+export class MatrixGenerator {
+  /**
+   * Generate a program matrix from extracted content (Route A)
+   */
+  async generateFromContent(
+    brief: any,
+    extractedContent: string,
+    learningArc?: any
+  ): Promise<ProgramMatrix> {
+    try {
+      console.log('Generating matrix from extracted content...');
+
+      // Load prompt template
+      const promptTemplate = await promptTemplateService.getPrompt(
+        PromptCategory.MATRIX_GENERATION_CONTENT,
+        DEFAULT_MATRIX_FROM_CONTENT_PROMPT
+      );
+
+      const arcContext = learningArc
+        ? `\n\nLEARNING ARC TO FOLLOW:\n- Title: ${learningArc.title}\n- Narrative: ${learningArc.narrative}\n- Progression: ${learningArc.progression.map((p: any, i: number) => `\n  ${i + 1}. ${p.phase}: ${p.focus}`).join('')}\n\nStructure the sessions to follow this narrative arc and progression.`
+        : '';
+
+      const contentPreview = extractedContent.substring(0, 8000) +
+        (extractedContent.length > 8000 ? ' ...(truncated)' : '');
+
+      const prompt = promptTemplateService.buildPrompt(promptTemplate, {
+        clientName: brief.clientName,
+        industry: brief.industry,
+        objectives: brief.objectives || 'General training',
+        audience: brief.audience || 'General employees',
+        contentPreview,
+        arcContext,
+        arcContextNote: learningArc ? ' following the learning arc narrative' : ''
+      });
 
       const response = await client.chat.completions.create({
         model: 'gpt-4o',
@@ -179,16 +211,16 @@ Apply the selected methodology and latest developments from the research.`;
     try {
       console.log('Regenerating matrix with feedback...');
 
-      const prompt = `You are an instructional designer revising a training program.
+      // Load prompt template
+      const promptTemplate = await promptTemplateService.getPrompt(
+        PromptCategory.MATRIX_REGENERATION,
+        DEFAULT_MATRIX_REGENERATION_PROMPT
+      );
 
-ORIGINAL PROGRAM:
-${JSON.stringify(originalMatrix, null, 2)}
-
-USER FEEDBACK:
-${feedback}
-
-TASK:
-Revise the program based on the feedback. Maintain the same JSON structure but incorporate the requested changes.`;
+      const prompt = promptTemplateService.buildPrompt(promptTemplate, {
+        originalMatrix: JSON.stringify(originalMatrix, null, 2),
+        feedback
+      });
 
       const response = await client.chat.completions.create({
         model: 'gpt-4o',

@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { promptTemplateService, PromptCategory } from './promptTemplateService';
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -24,44 +25,26 @@ export interface SampleContent {
   };
 }
 
-export class SampleGenerator {
-  /**
-   * Generate a complete sample (article + quiz) for the first session
-   */
-  async generateSample(
-    brief: any,
-    programMatrix: any,
-    learningArc: any,
-    previousFeedback?: string
-  ): Promise<SampleContent> {
-    try {
-      console.log('Generating sample article and quiz...');
-
-      const firstSession = programMatrix.sessions[0];
-
-      const feedbackContext = previousFeedback
-        ? `\n\nPREVIOUS FEEDBACK TO INCORPORATE:\n${previousFeedback}`
-        : '';
-
-      const prompt = `You are a training content creator generating a complete learning session.
+// Default prompt templates
+const DEFAULT_SAMPLE_GENERATION_PROMPT = `You are a training content creator generating a complete learning session.
 
 CLIENT BRIEF:
-- Client: ${brief.clientName}
-- Industry: ${brief.industry}
-- Audience: ${brief.audience || 'General employees'}
+- Client: {{clientName}}
+- Industry: {{industry}}
+- Audience: {{audience}}
 
 LEARNING ARC:
-- Title: ${learningArc.title}
-- Narrative: ${learningArc.narrative}
-- Current Phase: ${learningArc.progression[0].phase} - ${learningArc.progression[0].focus}
+- Title: {{arcTitle}}
+- Narrative: {{arcNarrative}}
+- Current Phase: {{currentPhase}}
 
 SESSION TO CREATE:
-- Title: ${firstSession.title}
-- Objectives: ${firstSession.objectives.join(', ')}
-- Topics: ${firstSession.topics.join(', ')}
-- Duration: ${firstSession.estimatedDuration}
-- Key Takeaways: ${firstSession.keyTakeaways.join(', ')}
-${feedbackContext}
+- Title: {{sessionTitle}}
+- Objectives: {{sessionObjectives}}
+- Topics: {{sessionTopics}}
+- Duration: {{sessionDuration}}
+- Key Takeaways: {{sessionTakeaways}}
+{{feedbackContext}}
 
 TASK:
 Create a complete training session with both article and quiz.
@@ -80,6 +63,63 @@ Return JSON with:
     - explanation: Why this is correct (1-2 sentences)
 
 Make the content engaging, practical, and aligned with the learning objectives.`;
+
+const DEFAULT_SAMPLE_REGENERATION_PROMPT = `You are a training content creator revising content based on client feedback.
+
+CURRENT SAMPLE:
+{{currentSample}}
+
+SESSION REQUIREMENTS:
+- Title: {{sessionTitle}}
+- Objectives: {{sessionObjectives}}
+- Topics: {{sessionTopics}}
+
+CLIENT FEEDBACK:
+{{feedback}}
+
+TASK:
+Revise the training content to incorporate the feedback while maintaining educational quality.
+Keep the same JSON structure (article + quiz).`;
+
+export class SampleGenerator {
+  /**
+   * Generate a complete sample (article + quiz) for the first session
+   */
+  async generateSample(
+    brief: any,
+    programMatrix: any,
+    learningArc: any,
+    previousFeedback?: string
+  ): Promise<SampleContent> {
+    try {
+      console.log('Generating sample article and quiz...');
+
+      const firstSession = programMatrix.sessions[0];
+
+      // Load prompt template
+      const promptTemplate = await promptTemplateService.getPrompt(
+        PromptCategory.SAMPLE_GENERATION,
+        DEFAULT_SAMPLE_GENERATION_PROMPT
+      );
+
+      const feedbackContext = previousFeedback
+        ? `\n\nPREVIOUS FEEDBACK TO INCORPORATE:\n${previousFeedback}`
+        : '';
+
+      const prompt = promptTemplateService.buildPrompt(promptTemplate, {
+        clientName: brief.clientName,
+        industry: brief.industry,
+        audience: brief.audience || 'General employees',
+        arcTitle: learningArc.title,
+        arcNarrative: learningArc.narrative,
+        currentPhase: `${learningArc.progression[0].phase} - ${learningArc.progression[0].focus}`,
+        sessionTitle: firstSession.title,
+        sessionObjectives: firstSession.objectives.join(', '),
+        sessionTopics: firstSession.topics.join(', '),
+        sessionDuration: firstSession.estimatedDuration,
+        sessionTakeaways: firstSession.keyTakeaways.join(', '),
+        feedbackContext
+      });
 
       const response = await client.chat.completions.create({
         model: 'gpt-4o',
@@ -122,22 +162,19 @@ Make the content engaging, practical, and aligned with the learning objectives.`
 
       const firstSession = programMatrix.sessions[0];
 
-      const prompt = `You are a training content creator revising content based on client feedback.
+      // Load prompt template
+      const promptTemplate = await promptTemplateService.getPrompt(
+        PromptCategory.SAMPLE_REGENERATION,
+        DEFAULT_SAMPLE_REGENERATION_PROMPT
+      );
 
-CURRENT SAMPLE:
-${JSON.stringify(currentSample, null, 2)}
-
-SESSION REQUIREMENTS:
-- Title: ${firstSession.title}
-- Objectives: ${firstSession.objectives.join(', ')}
-- Topics: ${firstSession.topics.join(', ')}
-
-CLIENT FEEDBACK:
-${feedback}
-
-TASK:
-Revise the training content to incorporate the feedback while maintaining educational quality.
-Keep the same JSON structure (article + quiz).`;
+      const prompt = promptTemplateService.buildPrompt(promptTemplate, {
+        currentSample: JSON.stringify(currentSample, null, 2),
+        sessionTitle: firstSession.title,
+        sessionObjectives: firstSession.objectives.join(', '),
+        sessionTopics: firstSession.topics.join(', '),
+        feedback
+      });
 
       const response = await client.chat.completions.create({
         model: 'gpt-4o',

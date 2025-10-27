@@ -139,6 +139,110 @@ Return JSON with:
     - explanation: Why this is correct (1-2 sentences)
 
 Make the content engaging, practical, and aligned with the learning objectives.`
+    },
+    {
+      id: 'arc-regen-001',
+      name: 'Learning Arc Regeneration',
+      category: 'arc_regeneration',
+      template: `You are an instructional designer revising a learning arc based on client feedback.
+
+CLIENT BRIEF:
+- Client: {{clientName}}
+- Industry: {{industry}}
+- Objectives: {{objectives}}
+- Audience: {{audience}}
+
+CURRENT ARC:
+{{currentArc}}
+
+CLIENT FEEDBACK:
+{{feedback}}
+
+TASK:
+Revise the learning arc to incorporate the feedback while maintaining a cohesive narrative structure.
+Keep the same JSON structure but improve based on the feedback.`
+    },
+    {
+      id: 'matrix-regen-001',
+      name: 'Program Matrix Regeneration',
+      category: 'matrix_regeneration',
+      template: `You are an instructional designer revising a training program.
+
+ORIGINAL PROGRAM:
+{{originalMatrix}}
+
+USER FEEDBACK:
+{{feedback}}
+
+TASK:
+Revise the program based on the feedback. Maintain the same JSON structure but incorporate the requested changes.`
+    },
+    {
+      id: 'sample-regen-001',
+      name: 'Sample Content Regeneration',
+      category: 'sample_regeneration',
+      template: `You are a training content creator revising content based on client feedback.
+
+CURRENT SAMPLE:
+{{currentSample}}
+
+SESSION REQUIREMENTS:
+- Title: {{sessionTitle}}
+- Objectives: {{sessionObjectives}}
+- Topics: {{sessionTopics}}
+
+CLIENT FEEDBACK:
+{{feedback}}
+
+TASK:
+Revise the training content to incorporate the feedback while maintaining educational quality.
+Keep the same JSON structure (article + quiz).`
+    },
+    {
+      id: 'batch-gen-001',
+      name: 'Batch Content Generation',
+      category: 'batch_generation',
+      template: `You are a training content creator generating a complete learning session.
+
+CLIENT BRIEF:
+- Client: {{clientName}}
+- Industry: {{industry}}
+- Audience: {{audience}}
+
+LEARNING ARC CONTEXT:
+- Overall Theme: {{arcTitle}}
+- Narrative: {{arcNarrative}}
+- Current Phase: {{currentPhase}}
+
+SESSION TO CREATE:
+- Session {{sessionNumber}}: {{sessionTitle}}
+- Duration: {{sessionDuration}}
+- Objectives: {{sessionObjectives}}
+- Topics: {{sessionTopics}}
+- Key Takeaways: {{sessionTakeaways}}
+
+QUALITY TEMPLATE (match this style and quality):
+Sample Article Length: {{sampleWordCount}} words
+Sample Quiz Questions: {{sampleQuizCount}}
+Sample Question Style: {{sampleQuestionStyle}}
+
+TASK:
+Create a complete training session with article and quiz that matches the approved sample's quality and style.
+
+Return JSON with:
+- article:
+  - title: Engaging title for this session
+  - content: Full article content (800-1200 words) with paragraphs, examples, practical tips
+  - readingTime: Estimated reading time
+
+- quiz:
+  - questions: Array of {{sampleQuizCount}} multiple choice questions with:
+    - question: The question text
+    - options: Array of 4 answer choices
+    - correctIndex: Index of correct answer (0-3)
+    - explanation: Why this is correct (1-2 sentences)
+
+Ensure content builds on previous sessions and aligns with the learning arc progression.`
     }
   ];
 
