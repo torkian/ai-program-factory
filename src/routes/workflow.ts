@@ -476,21 +476,38 @@ router.post('/:sessionId/approach/select', async (req, res) => {
 });
 
 /**
- * Generate learning arc
+ * Generate learning arc (works for both Route A and B)
  */
 router.post('/:sessionId/arc/generate', async (req, res) => {
   try {
     const { sessionId } = req.params;
 
     const brief = await workflowManager.getStepData(sessionId, 'brief');
-    const extractedContent = await workflowManager.getStepData(sessionId, 'extractedContent');
     const selectedApproach = await workflowManager.getStepData(sessionId, 'selectedApproach');
 
-    if (!brief || !extractedContent || !selectedApproach) {
-      return res.status(400).json({ error: 'Required data not found' });
+    if (!brief || !selectedApproach) {
+      return res.status(400).json({ error: 'Brief or selected approach not found' });
     }
 
-    const arc = await arcGenerator.generateArc(brief, extractedContent, selectedApproach);
+    // Try to get extracted content (Route A) or research results (Route B)
+    let contentForArc = await workflowManager.getStepData(sessionId, 'extractedContent');
+
+    if (!contentForArc) {
+      // Route B: use research results summary
+      const research = await workflowManager.getStepData(sessionId, 'researchResults');
+      if (research) {
+        contentForArc = `Research-based training for ${brief.industry}.
+
+Latest Developments:
+${research.latestDevelopments?.join('\n') || 'Current best practices'}
+
+Selected Approach: ${selectedApproach}`;
+      } else {
+        return res.status(400).json({ error: 'No content or research data found' });
+      }
+    }
+
+    const arc = await arcGenerator.generateArc(brief, contentForArc, selectedApproach);
 
     // Save arc
     await workflowManager.saveStepData(sessionId, 'learningArc', arc);
@@ -621,11 +638,11 @@ router.post('/:sessionId/approach', async (req, res) => {
 
     await workflowManager.saveStepData(sessionId, 'selectedApproach', approach);
     await workflowManager.recordDecision(sessionId, 'approach_selection_b', approach, feedback);
-    await workflowManager.advanceToStep(sessionId, 'matrix_generation');
+    await workflowManager.advanceToStep(sessionId, 'arc_generation');
 
     res.json({
       success: true,
-      nextStep: 'matrix_generation'
+      nextStep: 'arc_generation'
     });
   } catch (error: any) {
     console.error('Error selecting approach:', error);

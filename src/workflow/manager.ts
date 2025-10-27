@@ -151,7 +151,7 @@ export class WorkflowManager {
 
       // Route B flow
       'route_b_research': 'approach_selection_b',
-      'approach_selection_b': 'arc_generation',
+      'approach_selection_b': 'arc_generation', // Route B also generates arc
 
       // Common flow
       'matrix_generation': 'matrix_review',
