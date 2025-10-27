@@ -150,6 +150,12 @@ export class MatrixGenerator {
 
       const result = JSON.parse(response.choices[0].message.content || '{}');
 
+      // Validate that result has chapters structure
+      if (!result.chapters || !Array.isArray(result.chapters)) {
+        console.warn('AI did not return chapters array, using fallback');
+        return this.getFallbackMatrix(brief, 'content');
+      }
+
       return {
         ...result,
         generatedAt: new Date().toISOString()
@@ -225,6 +231,12 @@ Apply the selected methodology and latest developments from the research.`;
 
       const result = JSON.parse(response.choices[0].message.content || '{}');
 
+      // Validate that result has chapters structure
+      if (!result.chapters || !Array.isArray(result.chapters)) {
+        console.warn('AI did not return chapters array, using fallback');
+        return this.getFallbackMatrix(brief, 'research');
+      }
+
       return {
         ...result,
         generatedAt: new Date().toISOString()
@@ -273,6 +285,12 @@ Apply the selected methodology and latest developments from the research.`;
       });
 
       const result = JSON.parse(response.choices[0].message.content || '{}');
+
+      // Validate that result has chapters structure
+      if (!result.chapters || !Array.isArray(result.chapters)) {
+        console.warn('AI did not return chapters array in regeneration, keeping original');
+        return originalMatrix;
+      }
 
       return {
         ...result,
