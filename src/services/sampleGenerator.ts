@@ -1,9 +1,13 @@
 import OpenAI from 'openai';
 import { promptTemplateService, PromptCategory } from './promptTemplateService';
+import { multiAgentArticleCreator } from './multiAgentArticle';
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
+
+// Feature flag for multi-agent (can be toggled)
+const USE_MULTI_AGENT = process.env.USE_MULTI_AGENT_ARTICLES === 'true';
 
 export interface QuizQuestion {
   question: string;
