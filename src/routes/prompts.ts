@@ -176,6 +176,43 @@ router.post('/:id/reset', async (req, res) => {
 });
 
 /**
+ * Reset a single prompt to its default value
+ */
+router.post('/:id/reset', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get the default templates
+    const { getDefaultTemplates } = require('../database/seed');
+    const defaults = getDefaultTemplates();
+
+    // Find the default for this ID
+    const defaultTemplate = defaults.find((t: any) => t.id === id);
+
+    if (!defaultTemplate) {
+      return res.status(404).json({
+        error: 'Default template not found for this ID'
+      });
+    }
+
+    // Update the template with default value
+    await updatePromptTemplate(id, defaultTemplate.template);
+
+    // Clear cache for this category
+    promptTemplateService.clearCache(defaultTemplate.category);
+
+    res.json({
+      success: true,
+      message: 'Prompt reset to default successfully',
+      template: defaultTemplate.template
+    });
+  } catch (error: any) {
+    console.error('Error resetting prompt:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * Reset all prompts to defaults (dangerous - requires confirmation)
  */
 router.post('/reset', async (req, res) => {

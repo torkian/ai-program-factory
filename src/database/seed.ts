@@ -4,10 +4,8 @@ function generateId(): string {
   return Date.now().toString() + Math.random().toString(36).substring(2, 9);
 }
 
-export async function seedPromptTemplates(): Promise<void> {
-  const db = await getDatabase();
-
-  const templates = [
+export function getDefaultTemplates() {
+  return [
     {
       id: 'approach-gen-content-001',
       name: 'Approach Generation (from Content)',
@@ -245,6 +243,11 @@ Return JSON with:
 Ensure content builds on previous sessions and aligns with the learning arc progression.`
     }
   ];
+}
+
+export async function seedPromptTemplates(): Promise<void> {
+  const db = await getDatabase();
+  const templates = getDefaultTemplates();
 
   // Check if templates already exist
   const existingCount = await db.get<{ count: number }>(

@@ -391,9 +391,10 @@
                     <h4>📝 Available Variables</h4>
                     <p>This prompt supports dynamic variables: ${extractVariables(template.template).map(v => `<code>{{${v}}}</code>`).join(', ') || 'None'}</p>
                 </div>
-                <div class="prompt-preview">${template.template}</div>
+                <div class="prompt-preview">${escapeHtml(template.template)}</div>
                 <div class="actions">
                     <button class="btn btn-primary" onclick="startEditing('${template.id}')">✏️ Edit Prompt</button>
+                    <button class="btn btn-secondary" onclick="resetPrompt('${template.id}', '${template.category}')" style="background: #ffc107; color: #333;">↺ Reset to Default</button>
                 </div>
             `;
         }
@@ -552,6 +553,46 @@
                     editingTemplates.delete(id);
 
                     // Refresh display
+                    displayTemplates();
+
+                    // Auto-hide message
+                    setTimeout(() => {
+                        document.getElementById('message-container').innerHTML = '';
+                    }, 3000);
+                } else {
+                    showMessage(data.error || 'Error resetting prompt', 'error');
+                }
+            } catch (error) {
+                console.error('Error resetting prompt:', error);
+                showMessage('Error resetting prompt: ' + error.message, 'error');
+            }
+        }
+
+        async function resetPrompt(id, category) {
+            if (!confirm(`Reset this prompt to its default value?\n\nAny customizations will be lost.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/prompts/${id}/reset`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage('Prompt reset to default!', 'success');
+
+                    // Update local template
+                    const template = templates.find(t => t.id === id);
+                    if (template && data.template) {
+                        template.template = data.template;
+                        template.updated_at = new Date().toISOString();
+                    }
+
+                    // Refresh display
+                    editingTemplates.delete(id);
                     displayTemplates();
 
                     // Auto-hide message
