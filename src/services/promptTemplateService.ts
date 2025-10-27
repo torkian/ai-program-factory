@@ -8,6 +8,7 @@ import {
 
 // Prompt template categories
 export enum PromptCategory {
+  FRAMEWORK_GENERATION = 'framework_generation',
   APPROACH_GENERATION_CONTENT = 'approach_generation_content',
   APPROACH_GENERATION_RESEARCH = 'approach_generation_research',
   ARC_GENERATION = 'arc_generation',

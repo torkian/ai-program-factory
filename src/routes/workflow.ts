@@ -11,6 +11,7 @@ import { arcGenerator } from '../services/arcGenerator';
 import { sampleGenerator } from '../services/sampleGenerator';
 import { batchGenerator } from '../services/batchGenerator';
 import { briefExtractor } from '../services/briefExtractor';
+import { frameworkGenerator } from '../services/frameworkGenerator';
 
 const router = Router();
 
@@ -182,6 +183,62 @@ router.post('/:sessionId/brief', async (req, res) => {
     const brief = req.body;
 
     await workflowManager.saveStepData(sessionId, 'brief', brief);
+    await workflowManager.advanceToStep(sessionId, 'framework_selection');
+
+    res.json({
+      success: true,
+      nextStep: 'framework_selection'
+    });
+  } catch (error: any) {
+    console.error('Error saving brief:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Generate framework options
+ */
+router.post('/:sessionId/frameworks/generate', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    const brief = await workflowManager.getStepData(sessionId, 'brief');
+
+    if (!brief) {
+      return res.status(400).json({ error: 'Brief not found' });
+    }
+
+    const frameworks = await frameworkGenerator.generateFrameworks(brief);
+
+    // Save frameworks
+    await workflowManager.saveStepData(sessionId, 'frameworkOptions', frameworks);
+
+    res.json({
+      success: true,
+      frameworks: frameworks.frameworks,
+      recommended: frameworks.recommended,
+      reasoning: frameworks.reasoning
+    });
+  } catch (error: any) {
+    console.error('Error generating frameworks:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Select framework
+ */
+router.post('/:sessionId/framework/select', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { frameworkId, feedback } = req.body;
+
+    if (!frameworkId) {
+      return res.status(400).json({ error: 'frameworkId is required' });
+    }
+
+    await workflowManager.saveStepData(sessionId, 'selectedFramework', frameworkId);
+    await workflowManager.recordDecision(sessionId, 'framework_selection', frameworkId, feedback);
     await workflowManager.advanceToStep(sessionId, 'route_selection');
 
     res.json({
@@ -189,7 +246,44 @@ router.post('/:sessionId/brief', async (req, res) => {
       nextStep: 'route_selection'
     });
   } catch (error: any) {
-    console.error('Error saving brief:', error);
+    console.error('Error selecting framework:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Request new framework options
+ */
+router.post('/:sessionId/frameworks/regenerate', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { feedback } = req.body;
+
+    const brief = await workflowManager.getStepData(sessionId, 'brief');
+
+    if (!brief) {
+      return res.status(400).json({ error: 'Brief not found' });
+    }
+
+    // Regenerate with feedback context
+    const enhancedBrief = {
+      ...brief,
+      additionalContext: (brief.additionalContext || '') + `\n\nUSER FEEDBACK ON PREVIOUS FRAMEWORKS: ${feedback}`
+    };
+
+    const frameworks = await frameworkGenerator.generateFrameworks(enhancedBrief);
+
+    // Save new frameworks
+    await workflowManager.saveStepData(sessionId, 'frameworkOptions', frameworks);
+
+    res.json({
+      success: true,
+      frameworks: frameworks.frameworks,
+      recommended: frameworks.recommended,
+      reasoning: frameworks.reasoning
+    });
+  } catch (error: any) {
+    console.error('Error regenerating frameworks:', error);
     res.status(500).json({ error: error.message });
   }
 });

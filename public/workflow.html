@@ -465,6 +465,23 @@
                 </form>
             </div>
 
+            <!-- Step 2.5: Framework Selection -->
+            <div class="step-content" id="step-framework">
+                <h2>Select Theoretical Framework</h2>
+                <p style="margin-bottom: 20px;">Based on your brief, we've identified 3 different theoretical frameworks or conceptual angles for structuring this training. Each represents a different school of thought.</p>
+
+                <div id="frameworks-container" style="margin-bottom: 30px;"></div>
+
+                <div style="background: #fff3cd; padding: 15px; border-radius: 6px; border: 1px solid #ffc107; margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 10px;">💡 Not satisfied with these options?</h4>
+                    <p style="margin-bottom: 10px; font-size: 0.9rem;">Tell us what you're looking for and we'll generate new framework options.</p>
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <textarea id="framework-feedback" rows="3" placeholder="E.g., Need something more focused on behavior change, or based on a specific learning theory..."></textarea>
+                    </div>
+                    <button class="btn btn-secondary" onclick="requestNewFrameworks()">🔄 Generate New Options</button>
+                </div>
+            </div>
+
             <!-- Step 3: Route Selection -->
             <div class="step-content" id="step-route">
                 <h2>Select Workflow Route</h2>
@@ -832,6 +849,7 @@
             // Show current step
             const stepMap = {
                 'brief': 'step-brief',
+                'framework_selection': 'step-framework',
                 'route_selection': 'step-route',
                 'route_a_upload': 'step-upload',
                 'content_review': 'step-content-review',
@@ -853,6 +871,10 @@
             document.getElementById(stepId).classList.add('active');
 
             // Auto-load data for steps that need it
+            if (step === 'framework_selection') {
+                loadFrameworks();
+            }
+
             if (step === 'content_review') {
                 loadContentReview();
             }
@@ -1532,6 +1554,152 @@ Implement secure patient data handling procedures`;
         function startNewSession() {
             showStep('sessions');
             loadSessions();
+        }
+
+        // Framework Selection Functions
+        async function loadFrameworks() {
+            if (!currentSessionId) return;
+
+            showLoading(true);
+
+            try {
+                const response = await fetch(`/api/workflow/${currentSessionId}/frameworks/generate`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    displayFrameworks(data.frameworks, data.recommended, data.reasoning);
+                } else {
+                    showMessage(data.error || 'Error generating frameworks', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading frameworks:', error);
+                showMessage('Error loading frameworks: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function displayFrameworks(frameworks, recommendedId, reasoning) {
+            const container = document.getElementById('frameworks-container');
+
+            let html = `
+                <div style="background: #f0f3ff; padding: 20px; border-radius: 8px; border: 2px solid #667eea; margin-bottom: 30px;">
+                    <h4 style="color: #667eea; margin-bottom: 10px;">💡 Our Recommendation</h4>
+                    <p style="font-size: 0.95rem;">${reasoning}</p>
+                </div>
+            `;
+
+            frameworks.forEach(framework => {
+                const isRecommended = framework.id === recommendedId;
+                html += `
+                    <div style="border: 2px solid ${isRecommended ? '#667eea' : '#e1e5e9'};
+                                padding: 25px; margin: 20px 0; border-radius: 8px;
+                                background: ${isRecommended ? '#f0f3ff' : 'white'};
+                                cursor: pointer; transition: all 0.3s;"
+                         onclick="selectFramework('${framework.id}')"
+                         onmouseover="if('${!isRecommended}') this.style.borderColor='#667eea'"
+                         onmouseout="if('${!isRecommended}') this.style.borderColor='#e1e5e9'">
+
+                        <h3 style="color: #667eea; margin-bottom: 10px;">
+                            ${framework.name}
+                            ${isRecommended ? '<span style="background: #667eea; color: white; padding: 4px 12px; border-radius: 4px; font-size: 0.8rem; margin-left: 10px;">⭐ Recommended</span>' : ''}
+                        </h3>
+
+                        <p style="margin-bottom: 15px; font-size: 1.05rem;"><strong>${framework.description}</strong></p>
+
+                        <div style="margin: 15px 0; padding: 15px; background: ${isRecommended ? 'white' : '#f8f9fa'}; border-radius: 6px;">
+                            <p style="margin-bottom: 10px;"><strong>Theoretical Basis:</strong> ${framework.theoreticalBasis}</p>
+                            <p><strong>Approach:</strong> ${framework.approach}</p>
+                        </div>
+
+                        <div style="margin: 15px 0;">
+                            <p style="margin-bottom: 8px;"><strong>Best For:</strong></p>
+                            <ul style="margin: 0 0 0 20px;">
+                                ${framework.bestFor.map(item => `<li>${item}</li>`).join('')}
+                            </ul>
+                        </div>
+
+                        <div style="margin: 15px 0;">
+                            <p style="margin-bottom: 8px;"><strong>Considerations:</strong></p>
+                            <ul style="margin: 0 0 0 20px;">
+                                ${framework.considerations.map(item => `<li>${item}</li>`).join('')}
+                            </ul>
+                        </div>
+
+                        <button class="btn btn-primary" style="margin-top: 15px;" onclick="event.stopPropagation(); selectFramework('${framework.id}')">
+                            Select This Framework
+                        </button>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        async function selectFramework(frameworkId) {
+            if (!currentSessionId) return;
+
+            showLoading(true);
+
+            try {
+                const response = await fetch(`/api/workflow/${currentSessionId}/framework/select`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ frameworkId })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage('Framework selected! Moving to route selection...', 'success');
+                    setTimeout(() => showStep(data.nextStep), 2000);
+                } else {
+                    showMessage(data.error || 'Error selecting framework', 'error');
+                }
+            } catch (error) {
+                console.error('Error selecting framework:', error);
+                showMessage('Error selecting framework: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function requestNewFrameworks() {
+            if (!currentSessionId) return;
+
+            const feedback = document.getElementById('framework-feedback').value;
+            if (!feedback || !feedback.trim()) {
+                showMessage('Please describe what kind of frameworks you\'re looking for', 'error');
+                return;
+            }
+
+            showLoading(true);
+
+            try {
+                const response = await fetch(`/api/workflow/${currentSessionId}/frameworks/regenerate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ feedback })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    displayFrameworks(data.frameworks, data.recommended, data.reasoning);
+                    document.getElementById('framework-feedback').value = '';
+                    showMessage('New framework options generated!', 'success');
+                } else {
+                    showMessage(data.error || 'Error generating new frameworks', 'error');
+                }
+            } catch (error) {
+                console.error('Error requesting new frameworks:', error);
+                showMessage('Error requesting new frameworks: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
         }
 
         // Download sample training document

@@ -12,18 +12,19 @@ import {
 
 export type WorkflowStep =
   | 'brief'
+  | 'framework_selection'   // NEW: Select theoretical framework/angle
   | 'route_selection'
   | 'route_a_upload'
-  | 'content_review'        // NEW: Review extracted content
-  | 'approach_selection_a'  // NEW: Choose approach for Route A
-  | 'arc_generation'        // NEW: Generate learning arc
-  | 'arc_review'            // NEW: Review learning arc
+  | 'content_review'        // Review extracted content
+  | 'approach_selection_a'  // Choose approach for Route A
+  | 'arc_generation'        // Generate learning arc
+  | 'arc_review'            // Review learning arc
   | 'route_b_research'
   | 'approach_selection_b'  // Route B approach selection
   | 'matrix_generation'
   | 'matrix_review'
-  | 'sample_generation'     // NEW: Generate sample article + quiz
-  | 'sample_validation'     // NEW: Validate sample quality
+  | 'sample_generation'     // Generate sample article + quiz
+  | 'sample_validation'     // Validate sample quality
   | 'batch_generation'
   | 'completed';
 
@@ -137,7 +138,8 @@ export class WorkflowManager {
    */
   getNextStep(currentStep: WorkflowStep, route?: 'A' | 'B'): WorkflowStep {
     const stepFlow: Record<WorkflowStep, WorkflowStep | ((route?: 'A' | 'B') => WorkflowStep)> = {
-      'brief': 'route_selection',
+      'brief': 'framework_selection',
+      'framework_selection': 'route_selection',
       'route_selection': (r) => r === 'A' ? 'route_a_upload' : 'route_b_research',
 
       // Route A flow
@@ -173,6 +175,7 @@ export class WorkflowManager {
   getStepName(step: WorkflowStep): string {
     const stepNames: Record<WorkflowStep, string> = {
       'brief': 'Client Brief',
+      'framework_selection': 'Select Framework',
       'route_selection': 'Route Selection',
       'route_a_upload': 'Upload Materials',
       'content_review': 'Review Extracted Content',
