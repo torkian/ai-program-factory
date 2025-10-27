@@ -21,7 +21,8 @@ export enum PromptCategory {
   BATCH_GENERATION = 'batch_generation',
   VIDEO_SCRIPT_GENERATION = 'video_script_generation',
   SESSION_DESCRIPTION = 'session_description',
-  CHAPTER_DESCRIPTION = 'chapter_description'
+  CHAPTER_DESCRIPTION = 'chapter_description',
+  INTERACTIVE_EXERCISE = 'interactive_exercise'
 }
 
 export class PromptTemplateService {

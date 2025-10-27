@@ -4,6 +4,7 @@ import { ProgramMatrix } from './matrixGenerator';
 import { SampleContent } from './sampleGenerator';
 import { videoScriptGenerator, VideoScript } from './videoScriptGenerator';
 import { descriptionGenerator, SessionDescription, ChapterDescription } from './descriptionGenerator';
+import { exerciseGenerator, InteractiveExercise } from './exerciseGenerator';
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -69,6 +70,7 @@ export interface SessionContent {
   };
   videoScript?: VideoScript; // Optional video script
   description?: SessionDescription; // Optional session description
+  exercise?: InteractiveExercise; // Optional interactive exercise
 }
 
 export interface BatchContent {
@@ -257,12 +259,27 @@ export class BatchGenerator {
       // Description is optional, continue without it
     }
 
+    // Generate interactive exercise
+    let exercise;
+    try {
+      exercise = await exerciseGenerator.generateExercise(
+        session.title,
+        session.objectives,
+        session.topics,
+        brief
+      );
+    } catch (error) {
+      console.error(`Error generating exercise for session ${session.sessionNumber}:`, error);
+      // Exercise is optional, continue without it
+    }
+
     return {
       sessionNumber: session.sessionNumber,
       article: result.article,
       quiz: result.quiz,
       videoScript,
-      description
+      description,
+      exercise
     };
   }
 
@@ -429,6 +446,42 @@ In the following session, we'll build on these foundations to explore more advan
             <p><em>Duration: ${session.videoScript.duration} | Words: ${session.videoScript.estimatedWordCount}</em></p>
             <div style="background: white; padding: 15px; border-radius: 6px; margin-top: 15px; white-space: pre-wrap; font-family: monospace;">
 ${session.videoScript.script}
+            </div>
+        </div>
+        ` : ''}
+
+        ${session.exercise ? `
+        <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin-top: 30px; border: 2px solid #ffc107;">
+            <h3 style="color: #856404;">💬 Interactive Exercise: ${session.exercise.title}</h3>
+            <p><em>Time: ${session.exercise.estimatedTime}</em></p>
+
+            <div style="background: white; padding: 15px; border-radius: 6px; margin: 15px 0;">
+                <strong>Scenario:</strong>
+                <p>${session.exercise.scenario}</p>
+            </div>
+
+            <div style="background: white; padding: 15px; border-radius: 6px; margin: 15px 0;">
+                <strong>Objective:</strong> ${session.exercise.objective}
+            </div>
+
+            <div style="background: white; padding: 15px; border-radius: 6px; margin: 15px 0;">
+                <strong>Exercise Flow:</strong>
+                <ol>
+                ${session.exercise.steps.map((step, i) => `
+                    <li><strong>${step.actor === 'mentor' ? '🎓 Mentor' : '✍️ You'}:</strong> ${step.prompt}
+                    ${step.hints ? `<ul style="margin-top: 5px; font-size: 0.9rem; color: #666;">
+                        ${step.hints.map(hint => `<li>Hint: ${hint}</li>`).join('')}
+                    </ul>` : ''}
+                    </li>
+                `).join('')}
+                </ol>
+            </div>
+
+            <div style="background: white; padding: 15px; border-radius: 6px;">
+                <strong>Success Criteria:</strong>
+                <ul>
+                ${session.exercise.successCriteria.map(criteria => `<li>${criteria}</li>`).join('')}
+                </ul>
             </div>
         </div>
         ` : ''}
