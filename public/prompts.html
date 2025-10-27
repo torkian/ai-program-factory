@@ -359,9 +359,14 @@
                     <div class="prompt-card ${isExpanded ? 'expanded' : ''}" id="card-${template.id}">
                         <div class="prompt-header" onclick="togglePrompt('${template.id}')">
                             <h3>${template.name}</h3>
-                            <button class="btn btn-expand" onclick="event.stopPropagation(); togglePrompt('${template.id}')">
-                                ${isExpanded ? '▼ Collapse' : '▶ Expand'}
-                            </button>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn btn-expand" onclick="event.stopPropagation(); togglePrompt('${template.id}')">
+                                    ${isExpanded ? '▼ Collapse' : '▶ Expand'}
+                                </button>
+                                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.9rem; background: #ffc107; color: #333;" onclick="event.stopPropagation(); resetSinglePrompt('${template.id}', '${template.name}')">
+                                    ↺ Reset to Default
+                                </button>
+                            </div>
                         </div>
 
                         <div class="prompt-meta">
@@ -518,6 +523,47 @@
             } catch (error) {
                 console.error('Error clearing cache:', error);
                 showMessage('Error clearing cache: ' + error.message, 'error');
+            }
+        }
+
+        async function resetSinglePrompt(id, name) {
+            if (!confirm(`Reset "${name}" to its default value?\n\nYour customizations will be lost.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/prompts/${id}/reset`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage(`✅ "${name}" reset to default!`, 'success');
+
+                    // Update the template in our local array
+                    const templateIndex = templates.findIndex(t => t.id === id);
+                    if (templateIndex !== -1 && data.template) {
+                        templates[templateIndex] = data.template;
+                    }
+
+                    // Cancel editing if this prompt was being edited
+                    editingTemplates.delete(id);
+
+                    // Refresh display
+                    displayTemplates();
+
+                    // Auto-hide message
+                    setTimeout(() => {
+                        document.getElementById('message-container').innerHTML = '';
+                    }, 3000);
+                } else {
+                    showMessage(data.error || 'Error resetting prompt', 'error');
+                }
+            } catch (error) {
+                console.error('Error resetting prompt:', error);
+                showMessage('Error resetting prompt: ' + error.message, 'error');
             }
         }
 
