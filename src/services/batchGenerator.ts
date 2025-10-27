@@ -3,6 +3,7 @@ import { promptTemplateService, PromptCategory } from './promptTemplateService';
 import { ProgramMatrix } from './matrixGenerator';
 import { SampleContent } from './sampleGenerator';
 import { videoScriptGenerator, VideoScript } from './videoScriptGenerator';
+import { descriptionGenerator, SessionDescription, ChapterDescription } from './descriptionGenerator';
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -67,12 +68,14 @@ export interface SessionContent {
     }[];
   };
   videoScript?: VideoScript; // Optional video script
+  description?: SessionDescription; // Optional session description
 }
 
 export interface BatchContent {
   programTitle: string;
   totalSessions: number;
   sessions: SessionContent[];
+  chapterDescriptions?: ChapterDescription[]; // Optional chapter descriptions
   generatedAt: string;
   metadata: {
     clientName: string;
@@ -126,10 +129,32 @@ export class BatchGenerator {
 
     console.log(`Batch generation complete! Generated ${sessions.length} sessions.`);
 
+    // Generate chapter descriptions
+    const chapterDescriptions: ChapterDescription[] = [];
+    console.log('Generating chapter descriptions...');
+
+    for (const chapter of programMatrix.chapters) {
+      try {
+        const chapterDesc = await descriptionGenerator.generateChapterDescription(
+          chapter,
+          {
+            programTitle: programMatrix.programTitle,
+            industry: brief.industry,
+            audience: brief.audience
+          }
+        );
+        chapterDescriptions.push(chapterDesc);
+      } catch (error) {
+        console.error(`Error generating description for chapter ${chapter.chapterNumber}:`, error);
+        // Continue without this description
+      }
+    }
+
     return {
       programTitle: programMatrix.programTitle,
       totalSessions: programMatrix.totalSessions,
       sessions,
+      chapterDescriptions,
       generatedAt: new Date().toISOString(),
       metadata: {
         clientName: brief.clientName,
@@ -216,11 +241,28 @@ export class BatchGenerator {
       // Video script is optional, continue without it
     }
 
+    // Generate session description
+    let description;
+    try {
+      description = await descriptionGenerator.generateSessionDescription(
+        session,
+        {
+          programTitle: learningArc.title,
+          industry: brief.industry,
+          audience: brief.audience
+        }
+      );
+    } catch (error) {
+      console.error(`Error generating description for session ${session.sessionNumber}:`, error);
+      // Description is optional, continue without it
+    }
+
     return {
       sessionNumber: session.sessionNumber,
       article: result.article,
       quiz: result.quiz,
-      videoScript
+      videoScript,
+      description
     };
   }
 
