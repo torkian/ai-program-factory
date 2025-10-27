@@ -203,8 +203,8 @@ We have completed a comprehensive overhaul of the AI Program Factory based on yo
 ## How To Test
 
 ### Local Testing:
-1. **Prompt Management:** http://localhost:8080/prompts.html
-2. **Main Workflow:** http://localhost:8080/workflow.html
+1. **Prompt Management:** http://domin/prompts.html
+2. **Main Workflow:** http://domin/workflow.html
 
 ### Test Workflow:
 1. Create New Session

@@ -883,6 +883,11 @@
                 loadApproachesIfNeeded();
             }
 
+            // Auto-generate arc when reaching arc_generation step
+            if (step === 'arc_generation') {
+                generateArc();
+            }
+
             if (step === 'arc_review') {
                 loadArcIfNeeded();
             }
